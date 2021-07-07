@@ -1,0 +1,3 @@
+MAX31855K.c:40:14:max31855k_read	32	static
+MAX31855K.c:66:13:error_check	24	static
+MAX31855K.c:99:13:parse_data	24	static
