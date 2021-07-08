@@ -61,8 +61,8 @@ all: main-build
 main-build: oven_system_id.elf secondary-outputs
 
 # Tool invocations
-oven_system_id.elf: $(OBJS) $(USER_OBJS) D:\projects\stm32\stm32_workspace\i2c_tmp102\STM32L476RGTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "oven_system_id.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"D:\projects\stm32\stm32_workspace\i2c_tmp102\STM32L476RGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="oven_system_id.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -u _printf_float -Wl,--start-group -lc -lm -Wl,--end-group
+oven_system_id.elf: $(OBJS) $(USER_OBJS) D:\projects\stm32\stm32_workspace\oven_system_id\STM32L476RGTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "oven_system_id.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"D:\projects\stm32\stm32_workspace\oven_system_id\STM32L476RGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="oven_system_id.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -u _printf_float -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
