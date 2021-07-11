@@ -51,7 +51,7 @@ UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 volatile uint8_t bin_sem = 0; // Synchronize main task with interrupt.
-volatile uint8_t count = 0;
+volatile uint32_t count = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -106,14 +106,17 @@ int main(void)
 
   __HAL_TIM_ENABLE_OCxPRELOAD(&htim3, TIM_CHANNEL_1); // Set OC1PE bit to enable output compare channel 1 preload.
 
-  HAL_TIM_Base_Start_IT(&htim16); // Start 0.1 s timer interrupt.
+  HAL_TIM_Base_Start_IT(&htim16); // Start 1 s timer interrupt.
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  uint8_t duty_cycle = 50; // TODO: Update control signal and set point
+
+ // TODO: Update set point
   uint8_t set_point = 170; //
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1); // Duty cycle initialized to 0%.
+  char UART_buf[100] = {0};
+
   while (1)
   {
 	// Wait for timer interrupt.
@@ -123,19 +126,33 @@ int main(void)
 	}
 	bin_sem = 0;
 	
-	if(count == 50)
+	// Pseudo-state machine.
+	switch(count)
 	{
-		count = 0;
-		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 255);
+	case 100:
+		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 2047); // 50% Duty Cycle
+		break;
+	case 750:
+		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 4095); // 100% Duty Cycle
+		break;
+	case 1250:
+		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 3071); // 75% Duty Cycle
+		break;
+	case 2000:
+		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 1023); // 25% Duty Cycle
+		break;
+	default:
+		break;
 	}
+
 	// Transmit set point, MCU control signal and temperature reading.
-	char UART_buf[100] = {0};
+
 	MAX31855K_t *max_ptr = max31855k_read(&hspi2, MAX_CS_GPIO_Port, MAX_CS_Pin);
 
 	switch (max_ptr->err)
 	{
 	case THERMO_OK:
-		sprintf(UART_buf, "%d %d %.2f\r\n", set_point, duty_cycle, max_ptr->hj_temp);
+		sprintf(UART_buf, "%d %d %.2f\r\n", set_point, (uint16_t)__HAL_TIM_GET_COMPARE(&htim3, TIM_CHANNEL_1)*100/4095, max_ptr->hj_temp);
 		break;
 	case THERMO_SHORT_VCC: // Thermocouple shorted to VCC.
 		sprintf(UART_buf, "Thermocouple shorted to VCC\r\n");
@@ -146,7 +163,7 @@ int main(void)
 	case THERMO_OPEN:      // Thermocouple connection is open.
 		sprintf(UART_buf, "Thermocouple connection is open\r\n");
 		break;
-	case THERMO_ZEROS:      // SPI read only 0s.
+	case THERMO_ZEROS:      // SPI read only 0 s.
 		sprintf(UART_buf, "SPI read only 0s\r\n");
 		break;
 	default:
@@ -276,9 +293,9 @@ static void MX_TIM3_Init(void)
 
   /* USER CODE END TIM3_Init 1 */
   htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 157 - 1;
+  htim3.Init.Prescaler = 9768 - 1;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 255 - 1;
+  htim3.Init.Period = 4095 - 1;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
@@ -331,7 +348,7 @@ static void MX_TIM16_Init(void)
 
   /* USER CODE END TIM16_Init 1 */
   htim16.Instance = TIM16;
-  htim16.Init.Prescaler = 800 - 1;
+  htim16.Init.Prescaler = 8000 - 1;
   htim16.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim16.Init.Period = 10000 - 1;
   htim16.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;

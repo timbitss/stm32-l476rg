@@ -47,3 +47,6 @@
 # VSCode directories
 .vscode/
 .metadata/
+
+# STM32CubeMX
+.mxproject

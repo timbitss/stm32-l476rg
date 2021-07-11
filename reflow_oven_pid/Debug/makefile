@@ -35,34 +35,34 @@ $(wildcard ../makefile.init) \
 $(wildcard ../makefile.targets) \
 
 
-BUILD_ARTIFACT_NAME := oven_system_id
+BUILD_ARTIFACT_NAME := reflow_oven_pid
 BUILD_ARTIFACT_EXTENSION := elf
 BUILD_ARTIFACT_PREFIX := 
 BUILD_ARTIFACT := $(BUILD_ARTIFACT_PREFIX)$(BUILD_ARTIFACT_NAME).$(BUILD_ARTIFACT_EXTENSION)
 
 # Add inputs and outputs from these tool invocations to the build variables 
 EXECUTABLES += \
-oven_system_id.elf \
+reflow_oven_pid.elf \
 
 SIZE_OUTPUT += \
 default.size.stdout \
 
 OBJDUMP_LIST += \
-oven_system_id.list \
+reflow_oven_pid.list \
 
 OBJCOPY_BIN += \
-oven_system_id.bin \
+reflow_oven_pid.bin \
 
 
 # All Target
 all: main-build
 
 # Main-build Target
-main-build: oven_system_id.elf secondary-outputs
+main-build: reflow_oven_pid.elf secondary-outputs
 
 # Tool invocations
-oven_system_id.elf: $(OBJS) $(USER_OBJS) D:\projects\stm32\stm32_workspace\oven_system_id\STM32L476RGTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "oven_system_id.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"D:\projects\stm32\stm32_workspace\oven_system_id\STM32L476RGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="oven_system_id.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -u _printf_float -Wl,--start-group -lc -lm -Wl,--end-group
+reflow_oven_pid.elf: $(OBJS) $(USER_OBJS) D:\projects\stm32\stm32_workspace\reflow_oven_pid\STM32L476RGTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "reflow_oven_pid.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"D:\projects\stm32\stm32_workspace\reflow_oven_pid\STM32L476RGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="reflow_oven_pid.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -u _printf_float -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
@@ -71,13 +71,13 @@ default.size.stdout: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
 	@echo 'Finished building: $@'
 	@echo ' '
 
-oven_system_id.list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-objdump -h -S $(EXECUTABLES) > "oven_system_id.list"
+reflow_oven_pid.list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-objdump -h -S $(EXECUTABLES) > "reflow_oven_pid.list"
 	@echo 'Finished building: $@'
 	@echo ' '
 
-oven_system_id.bin: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-objcopy  -O binary $(EXECUTABLES) "oven_system_id.bin"
+reflow_oven_pid.bin: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-objcopy  -O binary $(EXECUTABLES) "reflow_oven_pid.bin"
 	@echo 'Finished building: $@'
 	@echo ' '
 
