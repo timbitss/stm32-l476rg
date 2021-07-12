@@ -20,107 +20,159 @@
 
 #include "MAX31855K.h"
 
-// Temperature resolution:
+// Temperature resolutions:
 #define HJ_RES 0.25   // Hot junction temperature resolution in degrees Celsius.
-#define CJ_RES 0.0625 // Cold junction temperature resolution in degrees Celsius. 
+#define CJ_RES 0.0625 // Cold junction temperature resolution in degrees Celsius.
 
-static void error_check(MAX31855K_t *max, uint32_t data32);
-static void parse_data(MAX31855K_t *max, uint32_t data32);
+// Helper function declarations:
+static void MAX31855K_error_check(MAX31855K_t *max); // Check data for device faults or SPI read error.
 
 /**
- * @brief Read cold and hot junction temperature from MAX31855K device.
+ * @brief Initialize MAX31885K drive by configuring HAX31855K_t structrue. 
+ * 
+ *        Should be called once.
+ * 
+ * @param max           Pointer to MAX31855K_t object to store configuration parameters.
+ * @param hspi          Pointer to SPI handler.
+ * @param max_cs_port   GPIO port of MAX31855K chip-select.
+ * @param max_cs_pin    GPIO pin number of MAX31855K chip-select.
+ */
+void MAX31855K_Init(MAX31855K_t *max, SPI_HandleTypeDef *hspi, GPIO_TypeDef *max_cs_port, uint16_t max_cs_pin)
+{
+    max->spi_handle = hspi;
+    max->cs_port = max_cs_port;
+    max->cs_pin = max_cs_pin;
+}
+
+/**
+ * @brief Read data from MAX31855K in blocking mode and check for errors.
  * 
  *        SPI instance must be initialized prior to function call.
  * 
- * @param spi_handle Handle to SPI instance for reading data.
- * @param cs_port Chip-select port letter.
- * @param cs_pin  Chip-select pin number.
- * @return Pointer to MAX31855K_t object with updated temperature and error values.
+ * @param max Pointer to MAX321885K_t structure containing configuration parameters and data.
  */
-MAX31855K_t *max31855k_read(SPI_HandleTypeDef *spi_handle, GPIO_TypeDef *cs_port, uint16_t cs_pin)
+void MAX31855K_RxBlocking(MAX31855K_t *max)
 {
-    static MAX31855K_t max_obj = {0};
+    /* Acquire data from MAX31855K */
+    HAL_GPIO_WritePin(max->cs_port, max->cs_pin, GPIO_PIN_RESET); // Assert CS line to start transaction.
+    HAL_SPI_Receive(max->spi_handle,                              // Sample 4 bytes off MISO line.
+                    max->rx_buf,
+                    sizeof(max->rx_buf),
+                    HAL_MAX_DELAY);
+    HAL_GPIO_WritePin(max->cs_port, max->cs_pin, GPIO_PIN_SET); // Deassert CS line to end transaction.
+    max->data32 = max->rx_buf[0] << 24 | (max->rx_buf[1] << 16) | (max->rx_buf[2] << 8) | max->rx_buf[3];
 
-    // Acquire data from MAX31855K
-    uint8_t raw_data[4] = {0};
-    HAL_GPIO_WritePin(cs_port, cs_pin, GPIO_PIN_RESET);              // Assert CS line.
-    HAL_SPI_Receive(spi_handle, raw_data, sizeof(raw_data), HAL_MAX_DELAY); // Sample 4 bytes off MISO line.
-    HAL_GPIO_WritePin(cs_port, cs_pin, GPIO_PIN_SET);                // Deassert CS line.
-    uint32_t raw_data32 = raw_data[0] << 24 | (raw_data[1] << 16) | (raw_data[2] << 8) | raw_data[3];
+    /* Check for faults. */
+    MAX31855K_error_check(max);
+}
 
-    // Check for faults.
-    error_check(&max_obj, raw_data32);
-    
-    // Parse data for HJ and CJ temperature.
-    parse_data(&max_obj, raw_data32);
+/**
+ * @brief Read data from MAX31855K in non-blocking mode through DMA controller.
+ * 
+ * @param max Pointer to MAX321885K_t structure containing configuration parameters and data.
+ */
+void MAX31855K_RxDMA(MAX31855K_t *max)
+{
+    /* Pull CS line low */
+    HAL_GPIO_WritePin(max->cs_port, max->cs_pin, GPIO_PIN_RESET);
 
-    return &max_obj;
+    /* Execute DMA transfer */
+    HAL_StatusTypeDef err = HAL_SPI_TransmitReceive_DMA(max->spi_handle, max->tx_buf, max->rx_buf, sizeof(max->rx_buf));
+    if (err != HAL_OK)
+    {
+        HAL_GPIO_WritePin(max->cs_port, max->cs_pin, GPIO_PIN_SET);
+        max->err = MAX_SPI_DMA_FAIL;
+    }
+}
+
+/**
+ * @brief Format data received and check for errors after DMA transfer.
+ * 
+ *        Function should be called from within SPI_RX_Cplt callback function.
+ * 
+ * @param max Pointer to MAX321885K_t structure containing configuration parameters and data.
+ */
+void MAX31885K_RxDMA_Complete(MAX31855K_t *max)
+{
+    HAL_GPIO_WritePin(max->cs_port, max->cs_pin, GPIO_PIN_SET);
+    max->data32 = max->rx_buf[0] << 24 | (max->rx_buf[1] << 16) | (max->rx_buf[2] << 8) | max->rx_buf[3];
+    MAX31855K_error_check(max);
 }
 
 /**
  * @brief Check data for device faults or SPI read error.
  * 
- * @param[in] data32 32-bit data received from MAX31855K.
- * @param[out] max MAX31855K_t object to hold error value. 
+ * @param max MAX31855K_t object to read raw data and to hold error value. 
  */
-static void error_check(MAX31855K_t *max, uint32_t data32)
+static void MAX31855K_error_check(MAX31855K_t *max)
 {
-    if (data32 == 0)
+    if (max->data32 == 0)
     {
-        max->err = THERMO_ZEROS;
+        max->err = MAX_ZEROS;
     }
-    else if (data32 & ((uint32_t)1 << 16))
+    else if (max->data32 & ((uint32_t)1 << 16))
     {
-        uint8_t fault = data32 & 0x7;
+        uint8_t fault = max->data32 & 0x7;
         switch (fault)
         {
         case 0x4:
-            max->err = THERMO_SHORT_VCC;
+            max->err = MAX_SHORT_VCC;
         case 0x2:
-            max->err = THERMO_SHORT_GND;
+            max->err = MAX_SHORT_GND;
         case 0x1:
-            max->err = THERMO_OPEN;
+            max->err = MAX_OPEN;
         default:
             break;
         }
     }
     else
     {
-        max->err = THERMO_OK;
+        max->err = MAX_OK;
     }
 }
 
 /**
- * @brief Parse data to acquire signed CJ and HJ temperature readings.
+ * @brief Parse HJ temperature from raw data.
  * 
- * @param max MAX31855K_t object to store temperature readings.
- * @param data32 Raw data from MAX31885K device.
+ * @pre Check that max's error value equals MAX_OK.
+ * @param max Pointer to MAX321885K_t structure containing configuration parameters and data.
+ * @return float Hot junction temperature.
  */
-static void parse_data(MAX31855K_t *max, uint32_t data32)
+float MAX31855K_Get_HJ(MAX31855K_t *max)
 {
-    // Extract cold-junction compensated hot junction temperature.
-    int16_t val = 0;
-    max->hj_temp = 0;
-    if (data32 & ((uint32_t)1 << 31)) // Perform sign-extension.
+    /* Extract HJ temperature. */
+    uint32_t data = max->data32;     // Capture latest data reading.
+    int16_t val = 0;                // Value prior to temperature conversion.
+    if (data & ((uint32_t)1 << 31)) // Perform sign-extension.
     {
-        val = 0xC000 | ((data32 >> 18) & 0x3FFF);
+        val = 0xC000 | ((data >> 18) & 0x3FFF);
     }
     else
     {
-        val = data32 >> 18;
+        val = data >> 18;
     }
-    max->hj_temp = val * HJ_RES;
+    return val * HJ_RES;
+}
 
-    // Extract cold junction temperature.
-    val = 0;
-    max->cj_temp = 0;
-    if (data32 & ((uint32_t)1 << 15))
+/**
+ * @brief Parse CJ temperature from raw data.
+ * 
+ * @pre Check that max's error value equals MAX_OK.
+ * @param max Pointer to MAX321885K_t structure containing configuration parameters and data.
+ * @return float Cold junction temperature.
+ */
+float MAX31855K_Get_CJ(MAX31855K_t *max)
+{
+    /* Extract CJ temperature. */
+    uint32_t data = max->data32;      // Capture latest data reading.
+    int16_t val = 0;                  // Value prior to temperature conversion.
+    if (data & ((uint32_t)1 << 15)) // Perform sign-extension.
     {
-        val = 0xF000 | ((data32 >> 4) & 0xFFF);
+        val = 0xF000 | ((data >> 4) & 0xFFF);
     }
     else
     {
-        val = (data32 >> 4) & 0xFFF;
+        val = (data >> 4) & 0xFFF;
     }
-    max->cj_temp = val * CJ_RES;
+    return val * CJ_RES;
 }
