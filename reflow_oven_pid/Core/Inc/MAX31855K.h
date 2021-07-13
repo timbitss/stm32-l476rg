@@ -1,3 +1,23 @@
+/**
+ * @file MAX31855K.h
+ * @author Timothy Nguyen
+ * @brief  MAX31855K SparkFun Breakout Board API.
+ * @version 0.1
+ * @date 2021-07-07
+ * 
+ * @note API inspired by SparkFun's MAX31855K Arduino library.
+ * 
+ * MAX31855K Memory Map:
+ * D[31:18] Signed 14-bit cold-junction compensated thermocouple temperature (HJ temperature)
+ * D17      Reserved: Always reads 0
+ * D16      Fault: 1 when any of the SCV, SCG, or OC faults are active, else 0
+ * D[15:4]  Signed 12-bit internal temperature
+ * D3       Reserved: Always reads 0
+ * D2       SCV fault: Reads 1 when thermocouple is shorted to V_CC, else 0
+ * D1       SCG fault: Reads 1 when thermocouple is shorted to gnd, else 0
+ * D0       OC  fault: Reads 1 when thermocouple is open-circuit, else 0
+ */
+
 #ifndef _MAX31855K_H_
 #define _MAX31855K_H_
 
@@ -27,6 +47,8 @@ typedef struct
     uint8_t tx_buf[4];   // SPI Transmit buffer.
     uint8_t rx_buf[4];   // SPI Receive buffer.
     uint32_t data32;     // Conversion of raw temperature reading to uint32.
+
+    /* Error value */
     MAX31855K_err_t err; // Thermocouple error value of most recent reading.
 
 } MAX31855K_t;
@@ -49,8 +71,11 @@ void MAX31855K_Init(MAX31855K_t *max, SPI_HandleTypeDef *hspi, GPIO_TypeDef *max
  *        SPI instance must be initialized prior to function call.
  * 
  * @param max Pointer to MAX321885K_t structure containing configuration parameters and data.
+ * @return MAX31855K_err_t Error value.
  */
-void MAX31855K_RxBlocking(MAX31855K_t *max);
+MAX31855K_err_t MAX31855K_RxBlocking(MAX31855K_t *max);
+
+
 
 /**
  * @brief Read data from MAX31855K in non-blocking mode through DMA controller.

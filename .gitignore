@@ -50,3 +50,6 @@
 
 # STM32CubeMX
 .mxproject
+
+# External libraries
+printf-master/

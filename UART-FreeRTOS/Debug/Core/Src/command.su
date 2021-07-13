@@ -1,0 +1,5 @@
+command.c:26:6:_putchar	16	static
+command.c:31:12:Command_Transmit	24	static
+command.c:39:6:UART_RX_Thread	16	static
+command.c:47:6:UART_TX_Thread	24	static
+command.c:65:9:Command_Init	96	static

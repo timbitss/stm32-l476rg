@@ -24,7 +24,10 @@
 /* USER CODE BEGIN Includes */
 #include <string.h>
 #include <stdio.h>
+
 #include "MAX31855K.h"
+#include "pid.h"
+#include "printf.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -59,7 +62,7 @@ volatile uint32_t count = 0;
 
 /* Driver objects */
 MAX31855K_t max31855K;
-
+PID_t pid;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -77,6 +80,12 @@ static void MX_TIM17_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+// Custom putchar() function required for "tiny" printf()
+void _putchar(char character)
+{
+    HAL_UART_Transmit(&huart2, (uint8_t*)&character, 1, HAL_MAX_DELAY);
+}
 
 // Callback Function for TIM16 and TIM17 interrupt.
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
@@ -104,7 +113,6 @@ void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi)
 // Callback if error occurred during DMA receive from MAX31855K.
 void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi)
 {
-
     if (hspi == &hspi2)
     {
         max31855K.err = MAX_SPI_DMA_FAIL;
@@ -161,7 +169,15 @@ int main(void)
     // Create local variables:
     uint8_t set_point = 170;                  // TODO: Update set point
     HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1); // Duty cycle initialized to 0%.
-    char UART_buf[100] = {0};
+
+    /* PID Iteration:
+      setpoint_temp = profile_get_setpoint();
+      measured_temp = MAX31855K_Get_HJ(&max31855K);
+
+      pwm = PID_Calculate(&pid, setpoint_temp, measured_temp);
+
+      __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwm); 
+    */
 
     while (1)
     {
@@ -196,33 +212,31 @@ int main(void)
         switch (max31855K.err) // Automatically updated every ~0.07 s
         {
         case MAX_OK:
-        					 /* SP, PWM, HJ, CJ */
-            sprintf(UART_buf, "%d %d %.2f %.2f\r\n", set_point,
+        		/* SP, PWM, HJ, CJ */
+            printf("%d %d %.2f %.2f\r\n", set_point,
                     (uint16_t)__HAL_TIM_GET_COMPARE(&htim3, TIM_CHANNEL_1) * 100 / 4095,
                     MAX31855K_Get_HJ(&max31855K),
                     MAX31855K_Get_CJ(&max31855K));
             break;
         case MAX_SHORT_VCC:
-            sprintf(UART_buf, "Thermocouple shorted to VCC\r\n");
+            printf("Thermocouple shorted to VCC\r\n");
             break;
         case MAX_SHORT_GND:
-            sprintf(UART_buf, "Thermocouple shorted to GND\r\n");
+            printf("Thermocouple shorted to GND\r\n");
             break;
         case MAX_OPEN:
-            sprintf(UART_buf, "Thermocouple connection is open\r\n");
+            printf("Thermocouple connection is open\r\n");
             break;
         case MAX_ZEROS:
-            sprintf(UART_buf, "SPI read only 0s\r\n");
+            printf("SPI read only 0s\r\n");
             break;
         case MAX_SPI_DMA_FAIL:
-            sprintf(UART_buf, "SPI DMA Fail\r\n");
+            printf("SPI DMA Fail\r\n");
             break;
         default:
-            sprintf(UART_buf, "Unknown error");
+            printf("Unknown error\r\n");
             break;
         }
-        HAL_UART_Transmit(&huart2, (uint8_t *)UART_buf, strlen(UART_buf), HAL_MAX_DELAY);
-
         /* USER CODE END WHILE */
 
         /* USER CODE BEGIN 3 */
