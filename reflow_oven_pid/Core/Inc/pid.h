@@ -69,7 +69,7 @@ void  PID_Init(PID_t *pid, float _Kp, float _Ki, float _Kd, float _tau,
 float PID_Calculate(PID_t *pid, float setpoint, float measurement);
 
 /**
- * @brief Clear PID memory and retain controller parameters.
+ * @brief Clear PID memory but retain controller parameters.
  * 
  * @param pid PID structure containing PID parameters and controller memory.
  */

@@ -13,6 +13,8 @@
 
 #include "PID.h"
 
+#define SAMESIGN(X, Y) ((X) <= 0) == ((Y) <= 0)
+
 void PID_Init(PID_t *pid, float _Kp, float _Ki, float _Kd, float _tau,
                float _Ts, float out_max, float out_min, float int_max)
 {
@@ -43,7 +45,7 @@ float PID_Calculate(PID_t *pid, float setpoint, float measurement)
     float proportional = pid->Kp * error;
 
     /* Compute integral term */
-    if (pid->out == pid->out_lim_max && pid->out > 0 && error > 0) 
+    if ((pid->out == pid->out_lim_max || pid->out == pid->out_lim_min) && SAMESIGN(pid->out, error)) 
     {
         pid->integral = pid->integral; /* Clamp integral term to avoid wind-up. */
     }
@@ -51,7 +53,6 @@ float PID_Calculate(PID_t *pid, float setpoint, float measurement)
     {
     	pid->integral = pid->integral + 0.5f * pid->Ki * pid->Ts * (error + pid->prev_error);
     }
-
 
 	/* Compute filtered derivative term. 
      * Note: Taking derivative on measurement only. */

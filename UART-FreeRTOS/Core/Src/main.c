@@ -25,6 +25,7 @@
 /* USER CODE BEGIN Includes */
 #include "command.h"
 #include "string.h"
+#include "printf.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -61,12 +62,39 @@ static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 void StartDefaultTask(void *argument);
 
+
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+uint8_t TurnOnLED(void)
+{
+    HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
+    return 0;
+}
+
+uint8_t TurnOffLED(void)
+{
+    HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+    return 0;
+}
+
+char buf[50] = {0};
+uint8_t SetPWMDuty(void)
+{
+    uint32_t pwm_duty = Command_get_uint32("Enter Duty Cycle [0, 100]");
+    snprintf(buf, 50, "Duty Cycle Updated to %d\r\n", pwm_duty);
+    Command_Transmit(buf, 50);
+    return 0;
+}
+
+static const Command_menu_option menu_opts[] = 
+{ {.name = "Turn LED on", .cb = &TurnOnLED},
+  {.name = "Turn LED off", .cb = &TurnOffLED},
+  {.name = "Set PWM Duty", .cb = &SetPWMDuty}};
 
 /* USER CODE END 0 */
 
@@ -127,7 +155,8 @@ int main(void)
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
-  uint8_t err = Command_Init(&huart2);
+
+  uint8_t err = Command_Init(&huart2, menu_opts, 3);
   if(err)
   {
 	  char buf[] = "Could not create UART threads\r\n";
@@ -291,13 +320,10 @@ static void MX_GPIO_Init(void)
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
-  char* s = "Hello World\r\n";
   /* Infinite loop */
   for(;;)
   {
-    printf("Sending message\r\n");
-	int err_tx = Command_Transmit(s, 50);
-    osDelay(1000);
+    osDelay(1);
   }
   /* USER CODE END 5 */
 }

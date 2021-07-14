@@ -75,8 +75,6 @@ void MAX31855K_Init(MAX31855K_t *max, SPI_HandleTypeDef *hspi, GPIO_TypeDef *max
  */
 MAX31855K_err_t MAX31855K_RxBlocking(MAX31855K_t *max);
 
-
-
 /**
  * @brief Read data from MAX31855K in non-blocking mode through DMA controller.
  * 
