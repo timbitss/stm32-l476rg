@@ -33,6 +33,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "uart.h"
 #include "printf.h"
 
 
@@ -150,7 +151,7 @@ static inline void _out_char(char character, void* buffer, size_t idx, size_t ma
 {
   (void)buffer; (void)idx; (void)maxlen;
   if (character) {
-    _putchar(character);
+    uart_putc(character);
   }
 }
 

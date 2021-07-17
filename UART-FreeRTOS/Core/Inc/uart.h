@@ -1,68 +1,67 @@
 /**
  * @file uart.h
  * @author Timothy Nguyen
- * @brief Interface for UART peripheral with CMSIS-RTOSv2
+ * @brief Interface for UART peripheral using STM32L4 LL library.
  * @version 0.1
  * @date 2021-07-12
  *
  * Notes:
  * - A UART peripheral must be initialized prior to using this module.
- * - Do not enable UART interrupts within CubeMX software.
+ * - Do not enable UART interrupts within CubeMX.
  */
 
-#ifndef _CONSOLE_H_
-#define _CONSOLE_H_
+#ifndef _UART_H_
+#define _UART_H_
 
-#include "cmsis_os.h"
 #include "common.h"
+#include "stm32l4xx_ll_usart.h"
 
 /* Configuration parameters */
-#define MAX_MSG_COUNT 5    // Maximum number of messages allowed in queue at a time to UART_TX_Thread.
-#define UART_BUF_SZ 100    // Maximum number of bytes in UART buffer.
-#define TX_BUF_SIZE 100    // Maximum number of bytes in UART's transmit circular buffer. 
-#define RX_BUF_SIZE 100    // Maximum number of bytes in UART's receive circular buffer. 
+#define UART_TX_BUF_SIZE 100   // Maximum number of bytes in UART's transmit circular buffer.
+#define UART_RX_BUF_SIZE 10    // Maximum number of bytes in UART's receive circular buffer.
 
-/* Type definitions */
-typedef uint8_t (*Item_handler_t)(void); // Command function pointer alias.
-
-/**
- * @brief Menu option.
- */
-typedef struct
+/* Configuration structure */
+typedef struct 
 {
-    const char *name;  // Name of menu option to be displayed to user.
-    Item_handler_t cb; // Callback if menu option is selected.
-} Command_menu_option;
+  USART_TypeDef *uart_reg_base; // Address of UARTn peripheral's base register.
+  IRQn_Type irq_num;           // Interrupt request number (IRQn) of UARTn peripheral.
+} uart_config_t;
 
 /**
- * @brief Initialize UART threads for reception and transmission with menu interface.
+ * @brief Initialize UART module with configuration structure.
  * 
- * @param huart Pointer to UART configuration structure.
- * @return mod_err_t MOD_OK if initialization was successful, appropriate error value otherwise.
+ * @param uart_cfg UART configuration structure containing hardware definitions.
  * 
- * @note OS scheduler is not called within initialization function.
+ * @return MOD_OK if initialization was successful, else a "MOD_ERR" value.
  */
-mod_err_t uart_init(UART_HandleTypeDef *huart);
-
+mod_err_t uart_init(uart_config_t* uart_cfg);
 
 /**
- * @brief Log message over serial.
+ * @brief Start reception and transmision of characters over UART by enabling interrupts.
  * 
- * @param msg String buffer to be transmitted over serial.
- * @param timeout_period Timeout period in ms.
- * @return osStatus_t osOK: Message placed into queue.
- *                    osErrorTimeout: Message could not be placed in queue in given timeout_period.
+ * @return MOD_OK for success, else a "MOD_ERR" value.
  */
-osStatus_t Console_Log(const char *msg, uint32_t timeout_period);
+mod_err_t uart_start(void);
+
+/** 
+ * @brief Put a character for transmission in transmit buffer.
+ *
+ * @param c Character to transmit.
+ * 
+ * @return MOD_OK for success, else a "MOD_ERR" value.
+ * 
+ * @note Character may be placed in transmit buffer even if interrupts are disabled.
+ */
+mod_err_t uart_putc(char c);
 
 /**
- * @brief Get uint32 from user in blocking mode.
- * 
- * @param prompt User prompt.
- * @return uint32_t 32-bit unsigned int received from user.
- * 
- *   Useful for options that require additional inputs.
+ * @brief Get a received character from receive buffer.
+ *
+ * @param[out] c Received character.
+ *
+ * @return Number of characters returned (0 or 1)
  */
-uint32_t Command_get_uint32(const char *prompt);
+uint8_t uart_getc(char* c);
+
 
 #endif

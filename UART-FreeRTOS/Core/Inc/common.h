@@ -15,12 +15,16 @@
 typedef enum
 {
     MOD_OK,               // Successful return value.
+
     MOD_ERR_ARG,          // Bad argument(s) passed to function.
-    MOD_ERR_RESOURCE,     // Insufficient memory for function's objects.
+    MOD_ERR_RESOURCE,     // Insufficient memory.
     MOD_ERR_BAD_CMD,      // Bad command.
     MOD_ERR_BUF_OVERRUN,  // Buffer overrun.
     MOD_ERR_NOT_INIT,     // Module has not been initialized.
-    MOD_ERR_BAD_INSTANCE, // Module instance has invalid parameters.
+    MOD_ERR_BAD_INSTANCE, // Module instance has invalid values.
+	MOD_ERR_PERIPH,       // Peripheral disabled.
+
+    MOD_DID_NOTHING,      // Function returned immediately without doing anything.
 } mod_err_t;
 
 /* Get number of elements in an array */
