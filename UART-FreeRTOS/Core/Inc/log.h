@@ -41,6 +41,34 @@ typedef enum {
     LOG_DEFAULT = LOG_INFO // Default log level.
 } log_level_t;
 
+/* Logging text colours */
+#define LOG_COLOUR_BLACK   "30"
+#define LOG_COLOUR_RED     "31"
+#define LOG_COLOUR_GREEN   "32"
+#define LOG_COLOUR_BROWN   "33"
+#define LOG_COLOUR_BLUE    "34"
+#define LOG_COLOUR_PURPLE  "35"
+#define LOG_COLOUR_CYAN    "36"
+#define LOG_COLOUR(COLOUR)  "\033[0;" COLOUR "m"
+#define LOG_BOLD(COLOUR)   "\033[1;" COLOUR "m"
+#define LOG_RESET_COLOUR   "\033[0m\033[K"
+
+#define LOG_COLOUR_E       LOG_COLOUR(LOG_COLOUR_RED)
+#define LOG_COLOUR_W       LOG_COLOUR(LOG_COLOUR_BROWN)
+#define LOG_COLOUR_I       LOG_COLOUR(LOG_COLOUR_GREEN)
+#define LOG_COLOUR_D       LOG_COLOUR(LOG_COLOUR_BLUE)
+#define LOG_COLOUR_V       LOG_COLOUR(LOG_COLOUR_CYAN)
+
+/**
+ * @brief Runtime macro to format string with additional information.
+ * 
+ * @param level First letter of log level.
+ * @param format Format string before additional information is prepended.
+ * 
+ * Additional information prepended from left-to-right: Colour, Log level, Time (ms), Tag. 
+ */                                 
+#define LOG_FORMAT(letter, format)  LOG_COLOUR_ ## letter #letter " (%lu.%03lu) %s: " format "\r\n"
+
 /**
  * @brief Initialize log module.
  *
@@ -68,6 +96,7 @@ bool log_is_active(void);
  * @brief Base "printf" style function for logging.
  *
  * @param fmt Format string.
+ * @param ... Variable arguments.
  *
  * This function is not intended to be used directly. Instead, use one of 
  * LOGE, LOGW, LOGI, LOGD, LOGV macros below.
@@ -75,27 +104,56 @@ bool log_is_active(void);
 void log_printf(const char* fmt, ...);
 
 /* Private variables for logging macros. Do not modify. */
-extern bool _log_active;
-extern int32_t _global_log_level;
+extern bool _log_active;             // Is data logging active or inactive? 
+extern int32_t _global_log_level;    // Only print messages at or below the global log level.
 
+/**
+ * @brief Runtime macros to output a log message at a specified level.
+ * 
+ * @param tag Unique tag associated with module.
+ * @param fmt Format string.
+ * @param ... Variable arguments. 
+ * 
+ * @note tag should have static storage duration.
+ */
 #define LOGE(tag, fmt, ...) do { \
-    if (_log_active && _global_log_level >= LOG_ERROR)   { log_printf("E " fmt, ##__VA_ARGS__); } \
+    if (_log_active && _global_log_level >= LOG_ERROR)  \
+        {   uint32_t ms = HAL_GetTick(); \
+            log_printf(LOG_FORMAT(E, fmt), ms/1000, ms%1000, tag, ##__VA_ARGS__); } \
     } while (0)
 
 #define LOGW(tag, fmt, ...) do {\
-    if (_log_active && _global_log_level >= LOG_WARNING) { log_printf("W " fmt, ##__VA_ARGS__); } \
+    if (_log_active && _global_log_level >= LOG_WARNING) \
+        {   uint32_t ms = HAL_GetTick(); \
+            log_printf(LOG_FORMAT(W, fmt), ms/1000, ms%1000, tag, ##__VA_ARGS__); } \
     } while (0)
 
 #define LOGI(tag, fmt, ...) do { \
-    if (_log_active && _global_log_level >= LOG_INFO)    { log_printf("I " fmt, ##__VA_ARGS__); } \
+    if (_log_active && _global_log_level >= LOG_INFO)    \
+        {   uint32_t ms = HAL_GetTick(); \
+            log_printf(LOG_FORMAT(I, fmt), ms/1000, ms%1000, tag, ##__VA_ARGS__); } \
     } while (0)
 
 #define LOGD(tag, fmt, ...) do { \
-    if (_log_active && _global_log_level >= LOG_DEBUG)   { log_printf("D " fmt, ##__VA_ARGS__); } \
+    if (_log_active && _global_log_level >= LOG_DEBUG)   \
+        {   uint32_t ms = HAL_GetTick(); \
+            log_printf(LOG_FORMAT(D, fmt), ms/1000, ms%1000, tag, ##__VA_ARGS__); } \
     } while (0)
             
 #define LOGV(tag, fmt, ...) do { \
-    if (_log_active && _global_log_level >= LOG_VERBOSE)   {log_printf("V ", fmt, ##__VA_ARGS__); } \
+    if (_log_active && _global_log_level >= LOG_VERBOSE)  \
+        {   uint32_t ms = HAL_GetTick(); \
+            log_printf(LOG_FORMAT(V, fmt), ms/1000, ms%1000, tag, ##__VA_ARGS__); } \
     } while (0)
+
+/**
+ * @brief Runtime macro to output message with no specified level.
+ * 
+ * @param format Format string.
+ * @param ... Variable arguments.
+ *
+ * In essence, this macro bypasses log level checks and extra formatting.
+ */
+#define LOG(format, ...) log_printf(LOG_RESET_COLOUR format,  ##__VA_ARGS__)
 
 #endif // _LOG_H_

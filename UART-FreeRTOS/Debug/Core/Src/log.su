@@ -1,8 +1,8 @@
-log.c:85:11:log_init	8	static
-log.c:90:6:log_toggle	4	static
-log.c:103:6:log_is_active	4	static
-log.c:115:6:log_printf	16	static
-log.c:133:20:log_level_str	16	static
-log.c:144:16:log_level_int	24	static
-log.c:169:10:cmd_log_get	16	static
-log.c:183:10:cmd_log_set	24	static
+log.c:92:11:log_init	16	static
+log.c:98:6:log_toggle	4	static
+log.c:104:6:log_is_active	4	static
+log.c:109:6:log_printf	16	static
+log.c:124:20:log_level_str	16	static
+log.c:135:16:log_level_int	24	static
+log.c:160:10:cmd_log_get	48	static
+log.c:174:10:cmd_log_set	56	static

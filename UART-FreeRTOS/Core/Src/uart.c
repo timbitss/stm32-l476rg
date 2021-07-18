@@ -11,9 +11,11 @@
 #include "uart.h"
 #include "printf.h"
 #include "common.h"
+#include "cmd.h"
 #include "stm32l4xx_ll_usart.h"
 #include "stm32l4xx_hal.h"
 #include "string.h"
+#include "log.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Common macros
@@ -66,6 +68,30 @@ static UART_t uart;
 /* Performance measurement counters */
 static uint16_t uart_pms[NUM_U16_PMS];
 
+/* Performance measurement names */
+static const char* pm_names[] = {
+    "ORE",
+    "NE",
+    "FE",
+    "PE",
+    "TX BUF ORE",
+    "RX BUF ORE"
+};
+
+/* Log module client info */
+static cmd_client_info uart_client_info =
+{
+		 .client_name = "uart",
+		 .num_cmds = 0,
+		 .cmds = NULL,
+		 .num_u16_pms = NUM_U16_PMS,
+		 .u16_pms = uart_pms,
+		 .u16_pm_names = pm_names
+};
+
+/* Unique tag for logging module */
+static const char* TAG = "UART";
+
 ////////////////////////////////////////////////////////////////////////////////
 // Private (static) function prototypes
 ////////////////////////////////////////////////////////////////////////////////
@@ -99,7 +125,9 @@ mod_err_t uart_init(uart_config_t* uart_cfg)
 				memset(&uart, 0, sizeof(uart));
 				uart.irq_num = uart_cfg->irq_num;
 				uart.uart_reg_base = uart_cfg->uart_reg_base;
-				return MOD_OK;
+			    mod_err_t err = cmd_register(&uart_client_info);
+			    LOGI(TAG, "Initialized UART");
+				return err;
 			default:
 				return MOD_ERR_ARG;
 		}
@@ -111,6 +139,7 @@ mod_err_t uart_start(void)
 {
     if (uart.uart_reg_base == NULL)
     {
+        LOGE(TAG, "UART not initialized");
         return MOD_ERR_NOT_INIT;
     }
 

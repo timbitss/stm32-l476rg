@@ -4,6 +4,8 @@
  * @brief Timothy Nguyen
  * @version 0.1
  * @date 2021-07-15
+ * 
+ * Console module acts as the intermediary between the UART and command module.
  */
 
 #ifndef _CONSOLE_H_
@@ -27,7 +29,7 @@ mod_err_t console_init(void);
  * @return MOD_OK for success.
 
  * This function processes characters in UART's receive buffer in non-blocking mode.
- * If the Enter key is pressed, a command parser is invoked.
+ * If the Enter key character is recognized, a command parser is invoked.
  */
 mod_err_t console_run(void);
 

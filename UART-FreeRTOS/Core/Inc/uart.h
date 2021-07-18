@@ -17,8 +17,8 @@
 #include "stm32l4xx_ll_usart.h"
 
 /* Configuration parameters */
-#define UART_TX_BUF_SIZE 100   // Maximum number of bytes in UART's transmit circular buffer.
-#define UART_RX_BUF_SIZE 10    // Maximum number of bytes in UART's receive circular buffer.
+#define UART_TX_BUF_SIZE 1024   // Maximum number of bytes in UART's transmit circular buffer.
+#define UART_RX_BUF_SIZE 100    // Maximum number of bytes in UART's receive circular buffer.
 
 /* Configuration structure */
 typedef struct 
@@ -50,7 +50,7 @@ mod_err_t uart_start(void);
  * 
  * @return MOD_OK for success, else a "MOD_ERR" value.
  * 
- * @note Character may be placed in transmit buffer even if interrupts are disabled.
+ * @note Character may be placed in transmit buffer before interrupts are enabled to start transmission.
  */
 mod_err_t uart_putc(char c);
 

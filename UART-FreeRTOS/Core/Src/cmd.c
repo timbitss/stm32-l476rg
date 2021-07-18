@@ -8,13 +8,13 @@
 
 #include <ctype.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
 
 #include "cmd.h"
 #include "log.h"
+#include "printf.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Common macros
@@ -39,7 +39,8 @@ static mod_err_t client_command_handler(); // Handle client command.
 /* Hold information about each client */
 static const cmd_client_info *client_infos[CMD_MAX_CLIENTS];
 
-
+/* Unique tag for logging module */
+static const char* TAG = "CMD";
 
 ////////////////////////////////////////////////////////////////////////////////
 // Public (global) variables and externs
@@ -51,7 +52,7 @@ static const cmd_client_info *client_infos[CMD_MAX_CLIENTS];
 
 mod_err_t cmd_init(void)
 {
-    memset(client_infos, 0, sizeof(client_infos));
+	LOGI(TAG, "Initialized command module.");
     return 0;
 }
 
@@ -70,6 +71,7 @@ mod_err_t cmd_register(const cmd_client_info *_client_info)
 
 mod_err_t cmd_execute(char *cmd_line)
 {
+    LOGI(TAG, "Command received %s", cmd_line);
     uint32_t num_tokens = 0;
     const char *tokens[CMD_MAX_TOKENS] = {0}; // Store individual tokens as strings.
 
@@ -177,7 +179,7 @@ int32_t cmd_parse_args(int32_t argc, const char **argv, const char *fmt, cmd_arg
     }
     if (arg_cnt < argc)
     {
-        printf("Too many arguments\n");
+        printf("Too many arguments \r\n");
         return MOD_ERR_BAD_CMD;
     }
     return arg_cnt;
@@ -221,7 +223,7 @@ static mod_err_t tokenize(char *str_to_tokenize, const char **tokens, uint32_t *
         {
             if (token_count >= CMD_MAX_TOKENS)
             {
-                printf("Too many tokens\r\n");
+                LOGW(TAG, "Too many tokens");
                 return MOD_ERR_BAD_CMD;
             }
             else
@@ -271,26 +273,32 @@ static mod_err_t help_handler(const char** tokens)
         {
             const cmd_client_info *ci = client_infos[i];
 
-            if (ci->num_cmds == 0)
-            {
-                continue;
-            }
+            LOG("%s (", ci->client_name);
 
-            printf("%s (", ci->client_name);
-            uint8_t i2;
-            for (i2 = 0; i2 < ci->num_cmds; i2++)
+            if (ci->num_u16_pms > 0 && ci->num_cmds == 0)
+			{
+                /* If client provided pm info only, display pm command. */
+				LOG("pm)\r\n");
+				continue;
+			}
+            else if(ci->num_cmds == 0)
             {
-                const cmd_cmd_info* cci = &(ci->cmds[i2]);
-                printf("%s%s", i2 == 0 ? "" : ", ", cci->cmd_name);
+            	continue;
             }
-
-            /* If client provided pm info, also display pm command. */
-            if (ci->num_u16_pms > 0)
+            else
             {
-                printf("%s%s", i2 == 0 ? "" : ", ", "pm");
+            	uint8_t i2 = 0;
+            	for (i2 = 0; i2 < ci->num_cmds; i2++)
+            	{
+					const cmd_cmd_info* cci = &(ci->cmds[i2]);
+					LOG("%s%s", i2 == 0 ? "" : ", ", cci->cmd_name);
+            	}
+              	if (ci->num_u16_pms > 0)
+				{
+					LOG(", pm");
+				}
+              	LOG(")\r\n");
             }
-
-            printf(")\r\n");
         }
 
         return MOD_OK;
@@ -334,13 +342,13 @@ static mod_err_t client_command_handler(const char** tokens, uint32_t num_tokens
             for (uint8_t i2 = 0; i2 < ci->num_cmds; i2++)
             {
                 const cmd_cmd_info* cci = &(ci->cmds[i2]);
-                printf("%s %s: %s\r\n", ci->client_name, cci->cmd_name, cci->help);
+                LOG("%s %s: %s\r\n", ci->client_name, cci->cmd_name, cci->help);
             }
             /* If client provided pm info, print help for pm command also. */
             if (ci->num_u16_pms > 0)
             {
-                printf("%s pm: get or clear performance measurements, \
-                        args: [clear] \r\n", ci->client_name);
+                LOG("%s pm: get or clear performance measurements, "
+                        "args: [clear] \r\n", ci->client_name);
             }
 
             return MOD_OK;
@@ -355,11 +363,11 @@ static mod_err_t client_command_handler(const char** tokens, uint32_t num_tokens
                 bool clear = (num_tokens >= 3 && strcasecmp(tokens[2], "clear") == 0);
                 if (clear)
                 {
-                    printf("Clearing %s performance measurements\r\n", ci->client_name);
+                    LOG("Clearing %s performance measurements\r\n", ci->client_name);
                 }
                 else
                 {
-                    printf("%s pms:\r\n", ci->client_name);
+                    LOG("%s pms:\r\n", ci->client_name);
                 }
                 for (uint8_t i2 = 0; i2 < ci->num_u16_pms; i2++)
                 {
@@ -369,7 +377,7 @@ static mod_err_t client_command_handler(const char** tokens, uint32_t num_tokens
                     }
                     else
                     {
-                        printf("%s: %d\r\n", ci->u16_pm_names[i2], ci->u16_pms[i2]);
+                        LOG("%s: %d\r\n", ci->u16_pm_names[i2], ci->u16_pms[i2]);
                     }
                 }
             }
@@ -383,9 +391,9 @@ static mod_err_t client_command_handler(const char** tokens, uint32_t num_tokens
         {
             if (strcasecmp(tokens[1], ci->cmds[i2].cmd_name) == 0)
             {
-                if(num_tokens == 3 && strcasecmp(tokens[2], "help"))
+                if(num_tokens == 3 && strcasecmp(tokens[2], "help") == 0)
                 {
-                    printf("%s %s: %s\r\n", ci->client_name, ci->cmds[i2].cmd_name, ci->cmds[i2].help);
+                    LOG("%s %s: %s\r\n", ci->client_name, ci->cmds[i2].cmd_name, ci->cmds[i2].help);
                 }
                 else 
                 {
@@ -395,10 +403,16 @@ static mod_err_t client_command_handler(const char** tokens, uint32_t num_tokens
             }
         }
 
-        printf("No such command (%s %s)\n", tokens[0], tokens[1]);
+        LOG("No such command (%s %s)\r\n", tokens[0], tokens[1]);
         return MOD_ERR_BAD_CMD;
     }
 
-    printf("No such command (%s)\r\n", tokens[0]);
-    return MOD_ERR_BAD_CMD; // Could not find client.
+    /* Could not find client */
+    LOG("No such command ");
+    for(uint8_t i = 0; i < num_tokens ; i++)
+    {
+        LOG("%s ", tokens[i]);
+    }
+    LOG("\r\n");
+    return MOD_ERR_BAD_CMD; 
 }

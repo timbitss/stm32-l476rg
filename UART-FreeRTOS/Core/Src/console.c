@@ -48,7 +48,8 @@ typedef struct
 /* Console_t object */
 static Console_t console;
 
-// static int32_t log_level = LOG_DEFAULT;
+/* Unique tag for logging module */
+static const char * TAG = "CONSOLE";
 
 ////////////////////////////////////////////////////////////////////////////////
 // Public (global) variables and externs
@@ -66,6 +67,7 @@ static Console_t console;
 mod_err_t console_init(void)
 {
     memset(&console, 0, sizeof(console));
+    LOGI(TAG, "Initialized console.");
     return MOD_OK;
 }
 
@@ -76,7 +78,7 @@ mod_err_t console_run(void)
     if (!console.first_run_done)
     {
         console.first_run_done = true;
-        printf(PROMPT);
+        LOG(PROMPT);
     }
 
     /* Process all characters in UART's receive buffer. */
@@ -86,10 +88,10 @@ mod_err_t console_run(void)
         if (c == '\n' || c == '\r')
         {
             console.cmd_buf[console.num_cmd_buf_chars] = '\0'; // Signal end of command string.
-            printf("\r\n");
+            LOG("\r\n");
             cmd_execute(console.cmd_buf); // Execute command's callback function.
             console.num_cmd_buf_chars = 0;
-            printf(PROMPT);
+            LOG(PROMPT);
             continue;
         }
         /* Delete a character when Backspace key is pressed. */
@@ -97,7 +99,7 @@ mod_err_t console_run(void)
         {
             if (console.num_cmd_buf_chars > 0)
             {
-                printf("\x7f");
+                LOG("\x7f");
                 console.num_cmd_buf_chars--; // "Overwrite" last character.
             }
             continue;
@@ -106,8 +108,8 @@ mod_err_t console_run(void)
         if (c == LOG_TOGGLE_CHAR)
         {
             bool log_active = log_toggle();
-            printf("\r\n<Logging %s>\r\n", log_active ? "on" : "off");
-            printf(PROMPT);
+            LOG("\r\n<Logging %s>\r\n", log_active ? "on" : "off");
+            LOG(PROMPT);
             continue;
         }
         /* Echo the character back. */
@@ -116,12 +118,13 @@ mod_err_t console_run(void)
             if (console.num_cmd_buf_chars < (CONSOLE_CMD_BUF_SIZE - 1))
             {
                 console.cmd_buf[console.num_cmd_buf_chars++] = c;
-                printf("%c", c);
+                LOG("%c", c);
             }
             else
             {
                 /* No space in buffer, so ring terminal bell. */
-                printf("\a");
+                LOGW(TAG, "No more space in command buffer.");
+                LOG("\a");
             }
             continue;
         }

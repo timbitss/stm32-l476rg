@@ -27,7 +27,8 @@ Core/Src/uart.o: ../Core/Src/uart.c ../Core/Inc/uart.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_i2c_ex.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_pwr.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_pwr_ex.h \
- ../Core/Inc/printf.h ../Core/Inc/common.h
+ ../Core/Inc/printf.h ../Core/Inc/common.h ../Core/Inc/cmd.h \
+ ../Core/Inc/log.h
 
 ../Core/Inc/uart.h:
 
@@ -90,3 +91,7 @@ Core/Src/uart.o: ../Core/Src/uart.c ../Core/Inc/uart.h \
 ../Core/Inc/printf.h:
 
 ../Core/Inc/common.h:
+
+../Core/Inc/cmd.h:
+
+../Core/Inc/log.h:
