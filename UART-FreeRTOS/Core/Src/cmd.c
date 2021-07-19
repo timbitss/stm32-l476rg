@@ -71,7 +71,7 @@ mod_err_t cmd_register(const cmd_client_info *_client_info)
 
 mod_err_t cmd_execute(char *cmd_line)
 {
-    LOGI(TAG, "Command received %s", cmd_line);
+    LOGI(TAG, "Command received: %s", cmd_line);
     uint32_t num_tokens = 0;
     const char *tokens[CMD_MAX_TOKENS] = {0}; // Store individual tokens as strings.
 
@@ -391,7 +391,7 @@ static mod_err_t client_command_handler(const char** tokens, uint32_t num_tokens
         {
             if (strcasecmp(tokens[1], ci->cmds[i2].cmd_name) == 0)
             {
-                if(num_tokens == 3 && strcasecmp(tokens[2], "help") == 0)
+                if(num_tokens == 3 && (strcasecmp(tokens[2], "help") == 0 || strcasecmp(tokens[2], "?") == 0))
                 {
                     LOG("%s %s: %s\r\n", ci->client_name, ci->cmds[i2].cmd_name, ci->cmds[i2].help);
                 }
