@@ -1,7 +1,8 @@
-cmd.c:53:11:cmd_init	16	static
-cmd.c:59:11:cmd_register	24	static
-cmd.c:72:11:cmd_execute	80	static
-cmd.c:102:9:cmd_parse_args	40	static
-cmd.c:204:18:tokenize	40	static
-cmd.c:267:18:help_handler	32	static
-cmd.c:320:18:client_command_handler	48	static
+cmd.c:75:11:cmd_init	32	static
+cmd.c:85:11:cmd_register	24	static
+cmd.c:99:9:cmd_parse_args	40	static
+cmd.c:199:18:cmd_execute	96	static
+cmd.c:241:18:tokenize	56	static
+cmd.c:305:18:help_handler	32	static
+cmd.c:359:18:client_command_handler	48	static
+cmd.c:466:13:Cmd_Event_Handler	40	static

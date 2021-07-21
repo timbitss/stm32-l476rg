@@ -16,6 +16,7 @@ typedef enum
 {
     MOD_OK,               // Successful return value.
 
+    MOD_ERR,              // Generic error value.
     MOD_ERR_ARG,          // Bad argument(s) passed to function.
     MOD_ERR_RESOURCE,     // Insufficient memory.
     MOD_ERR_BAD_CMD,      // Bad command.

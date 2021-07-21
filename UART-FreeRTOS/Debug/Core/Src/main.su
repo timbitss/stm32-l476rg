@@ -2,8 +2,10 @@ stm32l4xx_ll_usart.h:675:22:LL_USART_Enable	16	static
 stm32l4xx_ll_usart.h:2787:22:LL_USART_ConfigAsyncMode	16	static
 stm32l4xx_ll_bus.h:565:22:LL_AHB2_GRP1_EnableClock	24	static
 stm32l4xx_ll_bus.h:1089:22:LL_APB1_GRP1_EnableClock	24	static
-main.c:70:5:main	16	static
-main.c:120:6:SystemClock_Config	232	static
-main.c:175:13:MX_USART2_UART_Init	64	static
-main.c:226:13:MX_GPIO_Init	48	static
-main.c:262:6:Error_Handler	4	static,ignoring_inline_asm
+main.c:80:5:main	16	static
+main.c:165:6:SystemClock_Config	232	static
+main.c:220:13:MX_USART2_UART_Init	64	static
+main.c:271:13:MX_GPIO_Init	48	static
+main.c:310:6:StartDefaultTask	16	static
+main.c:329:6:HAL_TIM_PeriodElapsedCallback	16	static
+main.c:346:6:Error_Handler	4	static,ignoring_inline_asm

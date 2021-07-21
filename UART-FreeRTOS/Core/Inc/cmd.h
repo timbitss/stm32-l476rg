@@ -12,13 +12,17 @@
 #define _CMD_H_
 
 #include "common.h"
+#include "cmd.h"
+#include "active.h"
 
 /* Configuration parameters */
-#define CMD_MAX_CLIENTS 10 // Maximum number of clients/modules using the command module.
-#define CMD_MAX_TOKENS 10  // Maximum number of command tokens.
+#define CMD_MAX_CLIENTS 10   // Maximum number of clients/modules using the command module.
+#define CMD_MAX_TOKENS 10    // Maximum number of command tokens.
+
 
 /* Function signature for a command handler function. */
 typedef uint32_t (*cmd_cb_t)(uint32_t argc, const char **argv);
+
 
 /* Information about a single command, provided by the client */
 typedef struct
@@ -27,6 +31,7 @@ typedef struct
     const cmd_cb_t cb;      // Command callback function
     const char *const help; // Command help string
 } cmd_cmd_info;
+
 
 /* Information about the client. */
 typedef struct
@@ -38,6 +43,24 @@ typedef struct
     uint16_t *const u16_pms;               // Performance measurement values.
     const char *const *const u16_pm_names; // Performance measurement names.
 } cmd_client_info;
+
+
+/* Cmd event signals */
+enum cmd_signals
+{
+	CMD_RX_SIG = USER_SIG // Command received from user over serial.
+};
+
+
+/* Derived command event class */
+typedef struct
+{
+	Event base;  // Inherit base event class.
+
+	/* Private attributes */
+	char *cmd_line; // Pointer to command string.
+} Cmd_Event;
+
 
 /* Argument representations */
 typedef struct 
@@ -55,12 +78,28 @@ typedef struct
     } val;
 } cmd_arg_val;
 
+
+/**
+ * @brief Base active class attribute of command active object.
+ *
+ * Other modules may post events to command active object using Active_post.
+ */
+extern Active * cmd_base;
+
+
 /** 
  * @brief Initialize cmd instance.
  *
  * @return MOD_OK for success, else a "MOD_ERR" value. 
  */
 mod_err_t cmd_init(void);
+
+
+/**
+ * @brief Start cmd instance.
+ */
+mod_err_t cmd_start(void);
+
 
 /** 
  * @brief Register a client.
@@ -73,17 +112,6 @@ mod_err_t cmd_init(void);
  */
 mod_err_t cmd_register(const cmd_client_info *_client_info);
 
-/**
- * @brief Execute a command line.
- *
- * @param cmd_line The command line string.
- *
- * @return MOD_OK for success, else a "MOD_ERR" value.
- *
- * This function parses the command line and then executes the command,
- * typically by running a command function handler for a client.
- */
-mod_err_t cmd_execute(char *cmd_line);
 
 /**
  * @brief Parse and validate command arguments

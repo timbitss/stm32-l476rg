@@ -1,2 +1,4 @@
-console.c:67:11:console_init	16	static
-console.c:75:11:console_run	16	static
+console.c:85:11:console_init	32	static
+console.c:93:11:console_run	32	static
+console.c:162:13:post_cmd_event	8	static
+console.c:173:20:switch_bufs	4	static

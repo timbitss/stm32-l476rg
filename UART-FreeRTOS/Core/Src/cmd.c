@@ -15,6 +15,8 @@
 #include "cmd.h"
 #include "log.h"
 #include "printf.h"
+#include "active.h"
+#include "console.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Common macros
@@ -24,6 +26,13 @@
 // Type definitions
 ////////////////////////////////////////////////////////////////////////////////
 
+/* Command active object class */
+typedef struct{
+	Active base; // Inheriting base active object class
+
+	/* Private attributes */
+	char cmd_buf[CONSOLE_CMD_BUF_SIZE]; // Command line buffer.
+} Cmd_Active;
 ////////////////////////////////////////////////////////////////////////////////
 // Private (static) function declarations
 ////////////////////////////////////////////////////////////////////////////////
@@ -31,6 +40,9 @@
 static mod_err_t tokenize(char *str_to_tokenize, const char **tokens, uint32_t *num_tokens); // Tokenize string.
 static mod_err_t help_handler(const char** tokens); // Handle global help command.
 static mod_err_t client_command_handler(); // Handle client command.
+
+/* Active object event handler */
+static void Cmd_Event_Handler(Cmd_Active * const ao, Cmd_Event const * const evt);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Private (static) variables
@@ -42,9 +54,19 @@ static const cmd_client_info *client_infos[CMD_MAX_CLIENTS];
 /* Unique tag for logging module */
 static const char* TAG = "CMD";
 
+/* Command active object */
+static Cmd_Active cmd_ao;
+
 ////////////////////////////////////////////////////////////////////////////////
 // Public (global) variables and externs
 ////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * @brief Base active class attribute of command active object.
+ *
+ * Other modules may post events to command active object using Active_post.
+ */
+Active * cmd_base;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Public (global) functions
@@ -52,9 +74,13 @@ static const char* TAG = "CMD";
 
 mod_err_t cmd_init(void)
 {
-	LOGI(TAG, "Initialized command module.");
-    return 0;
+	Active_ctor((Active *)&cmd_ao, (EventHandler)&Cmd_Event_Handler);  // Call base active object constructor.
+	cmd_base = &(cmd_ao.base);
+	memset(cmd_ao.cmd_buf, 0, CONSOLE_CMD_BUF_SIZE); // Initialize private variables.
+	LOGI(TAG, "Initialized command active object.");
+    return MOD_OK;
 }
+
 
 mod_err_t cmd_register(const cmd_client_info *_client_info)
 {
@@ -69,35 +95,6 @@ mod_err_t cmd_register(const cmd_client_info *_client_info)
     return MOD_ERR_RESOURCE;
 }
 
-mod_err_t cmd_execute(char *cmd_line)
-{
-    LOGI(TAG, "Command received: %s", cmd_line);
-    uint32_t num_tokens = 0;
-    const char *tokens[CMD_MAX_TOKENS] = {0}; // Store individual tokens as strings.
-
-    /* Tokenize command line */
-    mod_err_t err = tokenize(cmd_line, tokens, &num_tokens);
-    if (err)
-    {
-        return err;
-    }
-
-    /* If there are no tokens, nothing to do. */
-    if (num_tokens == 0)
-    {
-        return MOD_OK;
-    }
-
-    /* Handle help/? command. */
-    err = help_handler(tokens);
-    if(err != MOD_DID_NOTHING)
-    {
-        return err;
-    }
-   
-    err = client_command_handler(tokens, num_tokens);
-    return err;
-}
 
 int32_t cmd_parse_args(int32_t argc, const char **argv, const char *fmt, cmd_arg_val *arg_vals)
 {
@@ -189,6 +186,46 @@ int32_t cmd_parse_args(int32_t argc, const char **argv, const char *fmt, cmd_arg
 // Private (static) functions
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * @brief Execute a command line.
+ *
+ * @param cmd_line The command line string.
+ *
+ * @return MOD_OK for success, else a "MOD_ERR" value.
+ *
+ * This function parses the command line and then executes the command,
+ * typically by running a command function handler for a client.
+ */
+static mod_err_t cmd_execute(char *cmd_line)
+{
+    LOGI(TAG, "Command received: %s", cmd_line);
+    uint32_t num_tokens = 0;
+    const char *tokens[CMD_MAX_TOKENS] = {0}; // Store individual tokens as strings.
+
+    /* Tokenize command line */
+    mod_err_t err = tokenize(cmd_line, tokens, &num_tokens);
+    if (err)
+    {
+        return err;
+    }
+
+    /* If there are no tokens, nothing to do. */
+    if (num_tokens == 0)
+    {
+        return MOD_OK;
+    }
+
+    /* Handle help/? command. */
+    err = help_handler(tokens);
+    if(err != MOD_DID_NOTHING)
+    {
+        return err;
+    }
+
+    err = client_command_handler(tokens, num_tokens);
+    return err;
+}
+
 
 /**
  * @brief Tokenize string.
@@ -253,6 +290,7 @@ static mod_err_t tokenize(char *str_to_tokenize, const char **tokens, uint32_t *
     return MOD_OK;
 }
 
+
 /**
  * @brief Handle global help command.
  * 
@@ -306,6 +344,7 @@ static mod_err_t help_handler(const char** tokens)
 
     return MOD_DID_NOTHING; // Not a top-level help command.
 }
+
 
 /**
  * @brief Handle client-specific commands.
@@ -416,3 +455,29 @@ static mod_err_t client_command_handler(const char** tokens, uint32_t num_tokens
     LOG("\r\n");
     return MOD_ERR_BAD_CMD; 
 }
+
+
+/**
+ * Command event handler.
+ *
+ * @param ao Command active object.
+ * @param evt Command event object.
+ */
+static void Cmd_Event_Handler(Cmd_Active * const ao, Cmd_Event const * const evt)
+{
+	switch(evt->base.sig)
+	{
+	case INIT_SIG:
+		break;
+	case CMD_RX_SIG:
+		/* Copy command line to avoid race conditions. */
+		strncpy(cmd_ao.cmd_buf, evt->cmd_line, CONSOLE_CMD_BUF_SIZE);
+		cmd_execute(cmd_ao.cmd_buf);
+		break;
+	default:
+		LOGW(TAG, "Unknown event signal");
+		break;
+	}
+}
+
+

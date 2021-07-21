@@ -23,6 +23,7 @@
 
 #include "stm32l4xx_hal.h"
 #include "common.h"
+#include "printf.h"
 
 /* Configuration parameters */
 #define LOG_TOGGLE_CHAR '\t' // Press LOG_TOGGLE_CHAR to toggle logging on and off.
@@ -95,13 +96,15 @@ bool log_is_active(void);
 /** 
  * @brief Base "printf" style function for logging.
  *
+ * @param tag Unique module tag.
+ * @param level Message's log level.
  * @param fmt Format string.
  * @param ... Variable arguments.
  *
  * This function is not intended to be used directly. Instead, use one of 
  * LOGE, LOGW, LOGI, LOGD, LOGV macros below.
  */
-void log_printf(const char* fmt, ...);
+void log_printf(const char* tag, log_level_t level, const char *fmt, ...);
 
 /* Private variables for logging macros. Do not modify. */
 extern bool _log_active;             // Is data logging active or inactive? 
@@ -119,31 +122,31 @@ extern int32_t _global_log_level;    // Only print messages at or below the glob
 #define LOGE(tag, fmt, ...) do { \
     if (_log_active && _global_log_level >= LOG_ERROR)  \
         {   uint32_t ms = HAL_GetTick(); \
-            log_printf(LOG_FORMAT(E, fmt), ms/1000, ms%1000, tag, ##__VA_ARGS__); } \
+            log_printf(tag, LOG_ERROR, LOG_FORMAT(E, fmt), ms/1000, ms%1000, tag, ##__VA_ARGS__); } \
     } while (0)
 
 #define LOGW(tag, fmt, ...) do {\
-    if (_log_active && _global_log_level >= LOG_WARNING) \
+    if (_log_active) \
         {   uint32_t ms = HAL_GetTick(); \
-            log_printf(LOG_FORMAT(W, fmt), ms/1000, ms%1000, tag, ##__VA_ARGS__); } \
+            log_printf(tag, LOG_WARNING, LOG_FORMAT(W, fmt), ms/1000, ms%1000, tag, ##__VA_ARGS__); } \
     } while (0)
 
 #define LOGI(tag, fmt, ...) do { \
-    if (_log_active && _global_log_level >= LOG_INFO)    \
+    if (_log_active)    \
         {   uint32_t ms = HAL_GetTick(); \
-            log_printf(LOG_FORMAT(I, fmt), ms/1000, ms%1000, tag, ##__VA_ARGS__); } \
+            log_printf(tag, LOG_INFO, LOG_FORMAT(I, fmt), ms/1000, ms%1000, tag, ##__VA_ARGS__); } \
     } while (0)
 
 #define LOGD(tag, fmt, ...) do { \
-    if (_log_active && _global_log_level >= LOG_DEBUG)   \
+    if (_log_active)   \
         {   uint32_t ms = HAL_GetTick(); \
-            log_printf(LOG_FORMAT(D, fmt), ms/1000, ms%1000, tag, ##__VA_ARGS__); } \
+            log_printf(tag, LOG_DEBUG, LOG_FORMAT(D, fmt), ms/1000, ms%1000, tag, ##__VA_ARGS__); } \
     } while (0)
             
 #define LOGV(tag, fmt, ...) do { \
-    if (_log_active && _global_log_level >= LOG_VERBOSE)  \
+    if (_log_active)  \
         {   uint32_t ms = HAL_GetTick(); \
-            log_printf(LOG_FORMAT(V, fmt), ms/1000, ms%1000, tag, ##__VA_ARGS__); } \
+            log_printf(tag, LOG_VERBOSE, LOG_FORMAT(V, fmt), ms/1000, ms%1000, tag, ##__VA_ARGS__); } \
     } while (0)
 
 /**
@@ -154,6 +157,6 @@ extern int32_t _global_log_level;    // Only print messages at or below the glob
  *
  * In essence, this macro bypasses log level checks and extra formatting.
  */
-#define LOG(format, ...) log_printf(LOG_RESET_COLOUR format,  ##__VA_ARGS__)
+#define LOG(format, ...) printf(LOG_RESET_COLOUR format,  ##__VA_ARGS__)
 
 #endif // _LOG_H_
