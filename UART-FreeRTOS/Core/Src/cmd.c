@@ -27,22 +27,24 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 /* Command active object class */
-typedef struct{
-	Active base; // Inheriting base active object class
+typedef struct
+{
+    Active base; // Inherited base active object class
 
-	/* Private attributes */
-	char cmd_buf[CONSOLE_CMD_BUF_SIZE]; // Command line buffer.
+    /* Private attributes */
+    char cmd_buf[CONSOLE_CMD_BUF_SIZE]; // Command line buffer.
 } Cmd_Active;
+
 ////////////////////////////////////////////////////////////////////////////////
 // Private (static) function declarations
 ////////////////////////////////////////////////////////////////////////////////
 
 static mod_err_t tokenize(char *str_to_tokenize, const char **tokens, uint32_t *num_tokens); // Tokenize string.
-static mod_err_t help_handler(const char** tokens); // Handle global help command.
-static mod_err_t client_command_handler(); // Handle client command.
+static mod_err_t help_handler(const char **tokens);                                          // Handle global help command.
+static mod_err_t client_command_handler();                                                   // Handle client command.
 
 /* Active object event handler */
-static void Cmd_Event_Handler(Cmd_Active * const ao, Cmd_Event const * const evt);
+static void Cmd_Event_Handler(Cmd_Active *const ao, Cmd_Event const *const evt);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Private (static) variables
@@ -52,10 +54,13 @@ static void Cmd_Event_Handler(Cmd_Active * const ao, Cmd_Event const * const evt
 static const cmd_client_info *client_infos[CMD_MAX_CLIENTS];
 
 /* Unique tag for logging module */
-static const char* TAG = "CMD";
+static const char *TAG = "CMD";
 
 /* Command active object */
 static Cmd_Active cmd_ao;
+
+/* TimeEvent instance. */
+static TimeEvent cmd_time_evt;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Public (global) variables and externs
@@ -66,7 +71,7 @@ static Cmd_Active cmd_ao;
  *
  * Other modules may post events to command active object using Active_post.
  */
-Active * cmd_base;
+Active *cmd_base;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Public (global) functions
@@ -74,13 +79,21 @@ Active * cmd_base;
 
 mod_err_t cmd_init(void)
 {
-	Active_ctor((Active *)&cmd_ao, (EventHandler)&Cmd_Event_Handler);  // Call base active object constructor.
-	cmd_base = &(cmd_ao.base);
-	memset(cmd_ao.cmd_buf, 0, CONSOLE_CMD_BUF_SIZE); // Initialize private variables.
-	LOGI(TAG, "Initialized command active object.");
+    Active_ctor((Active *)&cmd_ao, (EventHandler)&Cmd_Event_Handler); // Call base active object constructor.
+    cmd_base = &(cmd_ao.base);
+    memset(cmd_ao.cmd_buf, 0, CONSOLE_CMD_BUF_SIZE); // Initialize private variables.
+
+    TimeEvent_ctor(&cmd_time_evt, TIMEOUT_SIG, &cmd_ao.base);
+
+    LOGI(TAG, "Initialized command.");
     return MOD_OK;
 }
 
+mod_err_t cmd_start()
+{
+    static const osThreadAttr_t thread_attr = {.stack_size = CMD_THREAD_SIZE};
+    return Active_start((Active *)&cmd_ao, &thread_attr, CMD_EVENT_MSG_COUNT, NULL);
+}
 
 mod_err_t cmd_register(const cmd_client_info *_client_info)
 {
@@ -94,7 +107,6 @@ mod_err_t cmd_register(const cmd_client_info *_client_info)
     }
     return MOD_ERR_RESOURCE;
 }
-
 
 int32_t cmd_parse_args(int32_t argc, const char **argv, const char *fmt, cmd_arg_val *arg_vals)
 {
@@ -217,7 +229,7 @@ static mod_err_t cmd_execute(char *cmd_line)
 
     /* Handle help/? command. */
     err = help_handler(tokens);
-    if(err != MOD_DID_NOTHING)
+    if (err != MOD_DID_NOTHING)
     {
         return err;
     }
@@ -225,7 +237,6 @@ static mod_err_t cmd_execute(char *cmd_line)
     err = client_command_handler(tokens, num_tokens);
     return err;
 }
-
 
 /**
  * @brief Tokenize string.
@@ -238,7 +249,7 @@ static mod_err_t cmd_execute(char *cmd_line)
  * 
  * Tokens include name of client, command, and arguments passed.
  */
-static mod_err_t tokenize(char *str_to_tokenize, const char **tokens, uint32_t *num_tokens)
+static inline mod_err_t tokenize(char *str_to_tokenize, const char **tokens, uint32_t *num_tokens)
 {
     char *ptr = str_to_tokenize;
     uint32_t token_count = 0;
@@ -264,7 +275,7 @@ static mod_err_t tokenize(char *str_to_tokenize, const char **tokens, uint32_t *
                 return MOD_ERR_BAD_CMD;
             }
             else
-            {   
+            {
                 /* Record pointer to start of token, then find end of token. */
                 tokens[token_count] = ptr;
                 ptr++;
@@ -290,7 +301,6 @@ static mod_err_t tokenize(char *str_to_tokenize, const char **tokens, uint32_t *
     return MOD_OK;
 }
 
-
 /**
  * @brief Handle global help command.
  * 
@@ -302,7 +312,7 @@ static mod_err_t tokenize(char *str_to_tokenize, const char **tokens, uint32_t *
  * 
  * Iterates through each client infos 
  */
-static mod_err_t help_handler(const char** tokens)
+static inline mod_err_t help_handler(const char **tokens)
 {
     if (strcasecmp("help", tokens[0]) == 0 || strcasecmp("?", tokens[0]) == 0)
     {
@@ -314,28 +324,28 @@ static mod_err_t help_handler(const char** tokens)
             LOG("%s (", ci->client_name);
 
             if (ci->num_u16_pms > 0 && ci->num_cmds == 0)
-			{
-                /* If client provided pm info only, display pm command. */
-				LOG("pm)\r\n");
-				continue;
-			}
-            else if(ci->num_cmds == 0)
             {
-            	continue;
+                /* If client provided pm info only, display pm command. */
+                LOG("pm)\r\n");
+                continue;
+            }
+            else if (ci->num_cmds == 0)
+            {
+                continue;
             }
             else
             {
-            	uint8_t i2 = 0;
-            	for (i2 = 0; i2 < ci->num_cmds; i2++)
-            	{
-					const cmd_cmd_info* cci = &(ci->cmds[i2]);
-					LOG("%s%s", i2 == 0 ? "" : ", ", cci->cmd_name);
-            	}
-              	if (ci->num_u16_pms > 0)
-				{
-					LOG(", pm");
-				}
-              	LOG(")\r\n");
+                uint8_t i2 = 0;
+                for (i2 = 0; i2 < ci->num_cmds; i2++)
+                {
+                    const cmd_cmd_info *cci = &(ci->cmds[i2]);
+                    LOG("%s%s", i2 == 0 ? "" : ", ", cci->cmd_name);
+                }
+                if (ci->num_u16_pms > 0)
+                {
+                    LOG(", pm");
+                }
+                LOG(")\r\n");
             }
         }
 
@@ -344,7 +354,6 @@ static mod_err_t help_handler(const char** tokens)
 
     return MOD_DID_NOTHING; // Not a top-level help command.
 }
-
 
 /**
  * @brief Handle client-specific commands.
@@ -356,11 +365,11 @@ static mod_err_t help_handler(const char** tokens)
  *         MOD_DID_NOTHING if not a client command, 
  *         otherwise a "MOD_ERR" value.
  */
-static mod_err_t client_command_handler(const char** tokens, uint32_t num_tokens)
+static inline mod_err_t client_command_handler(const char **tokens, uint32_t num_tokens)
 {
     for (uint8_t i = 0; client_infos[i] != NULL && i < CMD_MAX_CLIENTS; i++)
     {
-        const cmd_client_info* ci = client_infos[i];
+        const cmd_client_info *ci = client_infos[i];
 
         /* Look for correct client first */
         if (strcasecmp(tokens[0], ci->client_name) != 0)
@@ -377,22 +386,22 @@ static mod_err_t client_command_handler(const char** tokens, uint32_t num_tokens
         /* Handle help command directly. */
         if (strcasecmp(tokens[1], "help") == 0 || strcasecmp(tokens[1], "?") == 0)
         {
-        	/* Print out all commands associated with client */
+            /* Print out all commands associated with client */
             for (uint8_t i2 = 0; i2 < ci->num_cmds; i2++)
             {
-                const cmd_cmd_info* cci = &(ci->cmds[i2]);
+                const cmd_cmd_info *cci = &(ci->cmds[i2]);
                 LOG("%s %s: %s\r\n", ci->client_name, cci->cmd_name, cci->help);
             }
             /* If client provided pm info, print help for pm command also. */
             if (ci->num_u16_pms > 0)
             {
                 LOG("%s pm: get or clear performance measurements, "
-                        "args: [clear] \r\n", ci->client_name);
+                    "args: [clear] \r\n",
+                    ci->client_name);
             }
 
             return MOD_OK;
         }
-
 
         /* Handle pm command directly. */
         if (strcasecmp(tokens[1], "pm") == 0)
@@ -424,17 +433,16 @@ static mod_err_t client_command_handler(const char** tokens, uint32_t num_tokens
             return MOD_OK;
         }
 
-
         /* Look for command within client. */
         for (uint8_t i2 = 0; i2 < ci->num_cmds; i2++)
         {
             if (strcasecmp(tokens[1], ci->cmds[i2].cmd_name) == 0)
             {
-                if(num_tokens == 3 && (strcasecmp(tokens[2], "help") == 0 || strcasecmp(tokens[2], "?") == 0))
+                if (num_tokens == 3 && (strcasecmp(tokens[2], "help") == 0 || strcasecmp(tokens[2], "?") == 0))
                 {
                     LOG("%s %s: %s\r\n", ci->client_name, ci->cmds[i2].cmd_name, ci->cmds[i2].help);
                 }
-                else 
+                else
                 {
                     ci->cmds[i2].cb(num_tokens - 2, tokens + 2); // Ignore client and command tokens.
                 }
@@ -447,15 +455,14 @@ static mod_err_t client_command_handler(const char** tokens, uint32_t num_tokens
     }
 
     /* Could not find client */
-    LOG("No such command ");
-    for(uint8_t i = 0; i < num_tokens ; i++)
+    LOG("No such command: ");
+    for (uint8_t i = 0; i < num_tokens; i++)
     {
         LOG("%s ", tokens[i]);
     }
     LOG("\r\n");
-    return MOD_ERR_BAD_CMD; 
+    return MOD_ERR_BAD_CMD;
 }
-
 
 /**
  * Command event handler.
@@ -463,21 +470,24 @@ static mod_err_t client_command_handler(const char** tokens, uint32_t num_tokens
  * @param ao Command active object.
  * @param evt Command event object.
  */
-static void Cmd_Event_Handler(Cmd_Active * const ao, Cmd_Event const * const evt)
+static void Cmd_Event_Handler(Cmd_Active *const ao, Cmd_Event const *const evt)
 {
-	switch(evt->base.sig)
-	{
-	case INIT_SIG:
-		break;
-	case CMD_RX_SIG:
-		/* Copy command line to avoid race conditions. */
-		strncpy(cmd_ao.cmd_buf, evt->cmd_line, CONSOLE_CMD_BUF_SIZE);
-		cmd_execute(cmd_ao.cmd_buf);
-		break;
-	default:
-		LOGW(TAG, "Unknown event signal");
-		break;
-	}
+    switch (evt->base.sig)
+    {
+    case INIT_SIG:
+    	LOGI(TAG, "Arming timer.");
+    	TimeEvent_arm(&cmd_time_evt, 5U, 5U);
+        break;
+    case CMD_RX_SIG:
+        /* Copy command line to avoid race conditions. */
+        strncpy(cmd_ao.cmd_buf, evt->cmd_line, CONSOLE_CMD_BUF_SIZE);
+        cmd_execute(cmd_ao.cmd_buf);
+        break;
+    case TIMEOUT_SIG:
+    	LOGI(TAG, "Timeout event received.");
+        break;
+    default:
+        LOGW(TAG, "Unknown event signal");
+        break;
+    }
 }
-
-

@@ -42,7 +42,7 @@ Core/Src/uart.o: ../Core/Src/uart.c ../Core/Inc/uart.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/task.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/list.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.h \
- ../Core/Inc/log.h ../Core/Inc/printf.h
+ ../Core/Inc/log.h ../Core/Inc/printf.h ../Core/Inc/console.h
 
 ../Core/Inc/uart.h:
 
@@ -141,3 +141,5 @@ Core/Src/uart.o: ../Core/Src/uart.c ../Core/Inc/uart.h \
 ../Core/Inc/log.h:
 
 ../Core/Inc/printf.h:
+
+../Core/Inc/console.h:

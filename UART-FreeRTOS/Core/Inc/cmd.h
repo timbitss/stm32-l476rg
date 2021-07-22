@@ -16,22 +16,22 @@
 #include "active.h"
 
 /* Configuration parameters */
-#define CMD_MAX_CLIENTS 10   // Maximum number of clients/modules using the command module.
-#define CMD_MAX_TOKENS 10    // Maximum number of command tokens.
+#define CMD_MAX_CLIENTS 10 // Maximum number of clients/modules using the command module.
+#define CMD_MAX_TOKENS 10  // Maximum number of command tokens.
 
+#define CMD_THREAD_SIZE 1024  // Command active object thread size.
+#define CMD_EVENT_MSG_COUNT 5 // Maximum number of messages in event message queue.
 
 /* Function signature for a command handler function. */
 typedef uint32_t (*cmd_cb_t)(uint32_t argc, const char **argv);
-
 
 /* Information about a single command, provided by the client */
 typedef struct
 {
     const char *const cmd_name; // Name of command
-    const cmd_cb_t cb;      // Command callback function
-    const char *const help; // Command help string
+    const cmd_cb_t cb;          // Command callback function
+    const char *const help;     // Command help string
 } cmd_cmd_info;
-
 
 /* Information about the client. */
 typedef struct
@@ -44,26 +44,24 @@ typedef struct
     const char *const *const u16_pm_names; // Performance measurement names.
 } cmd_client_info;
 
-
-/* Cmd event signals */
+/* Command event signals */
 enum cmd_signals
 {
-	CMD_RX_SIG = USER_SIG // Command received from user over serial.
+    CMD_RX_SIG = USER_SIG, // Command received from user over serial.
+	TIMEOUT_SIG                // Timer event.
 };
-
 
 /* Derived command event class */
 typedef struct
 {
-	Event base;  // Inherit base event class.
+    Event base; // Inherit base event class.
 
-	/* Private attributes */
-	char *cmd_line; // Pointer to command string.
+    /* Private attributes */
+    char *cmd_line; // Pointer to command string.
 } Cmd_Event;
 
-
 /* Argument representations */
-typedef struct 
+typedef struct
 {
     char type;
     union
@@ -78,14 +76,12 @@ typedef struct
     } val;
 } cmd_arg_val;
 
-
 /**
  * @brief Base active class attribute of command active object.
  *
  * Other modules may post events to command active object using Active_post.
  */
-extern Active * cmd_base;
-
+extern Active *cmd_base;
 
 /** 
  * @brief Initialize cmd instance.
@@ -94,12 +90,14 @@ extern Active * cmd_base;
  */
 mod_err_t cmd_init(void);
 
-
 /**
- * @brief Start cmd instance.
+ * @brief Create command active object thread.
+ *
+ * @return MOD_OK if successful, else a "MOD_ERR" value
+ *
+ * @note Function does not start scheduler.
  */
 mod_err_t cmd_start(void);
-
 
 /** 
  * @brief Register a client.
@@ -111,7 +109,6 @@ mod_err_t cmd_start(void);
  * @note cmd_client_info should be declared static since module stores a copy of the pointer.
  */
 mod_err_t cmd_register(const cmd_client_info *_client_info);
-
 
 /**
  * @brief Parse and validate command arguments

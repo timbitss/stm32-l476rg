@@ -42,7 +42,8 @@
  */
 typedef struct Log_entry
 {
-    SLIST_ENTRY(Log_entry) entries;       // Required structure connecting elements in list.
+    SLIST_ENTRY(Log_entry)
+    entries;           // Required structure connecting elements in list.
     log_level_t level; // Module's logging level.
     char tag[10];      // Unique module tag.
 } Log_entry;
@@ -52,19 +53,21 @@ typedef struct Log_entry
  *
  * Tag entries are cached in a binary min-heap for faster access.
  */
-typedef struct {
+typedef struct
+{
     uint32_t generation : 29;
     uint32_t level : 3; // Module's logging level.
-    const char *tag; // Tag unique to module
+    const char *tag;    // Tag unique to module
 } Log_cached_entry;
 
 /**
  * @brief View state of cache.
  */
-typedef struct {
-    uint32_t max_generation; // Highest generation value currently in heap.
-    uint32_t entry_count;    // Number of entries in cache.
-    Log_cached_entry cache[TAG_CACHE_SIZE];      // Binary min-heap acting as a cache.
+typedef struct
+{
+    uint32_t max_generation;                // Highest generation value currently in heap.
+    uint32_t entry_count;                   // Number of entries in cache.
+    Log_cached_entry cache[TAG_CACHE_SIZE]; // Binary min-heap acting as a cache.
 } Log_cache_state_t;
 
 /**
@@ -80,19 +83,19 @@ SLIST_HEAD(Log_head_t, Log_entry);
 static uint32_t cmd_log_get(uint32_t argc, const char **argv); // Get log levels callback.
 static uint32_t cmd_log_set(uint32_t argc, const char **argv); // Set log level callback.
 
-static void log_level_set(const char* tag, log_level_t level); // Set tag's log level.
+static inline void log_level_set(const char *tag, log_level_t level); // Set tag's log level.
 
 static const char *log_level_str(int32_t level);      // Convert log level from integer to string.
 static int32_t log_level_int(const char *level_name); // Convert log level from string to integer.
 
-static log_level_t get_log_level(const char *tag); // Get log level, either from heap (cache) or linked list (uncached).
-static bool get_cached_log_level(const char *tag, log_level_t *level); // Get cached log level.
-static bool get_uncached_log_level(const char * tag, log_level_t *level); // Get uncached log level.
+static inline log_level_t get_log_level(const char *tag);                       // Get log level, either from heap (cache) or linked list (uncached).
+static inline bool get_cached_log_level(const char *tag, log_level_t *level);   // Get cached log level.
+static inline bool get_uncached_log_level(const char *tag, log_level_t *level); // Get uncached log level.
 
-static void log_add_cache(const char *tag, log_level_t log_level); // Add tag and log level to cache.
+static inline void log_add_cache(const char *tag, log_level_t log_level); // Add tag and log level to cache.
 
-static void heap_bubble_down(int index); // Heapify min-heap.
-static void heap_swap(uint32_t i, uint32_t j); // Swap heap array elements.
+static inline void heap_bubble_down(int index);       // Heapify min-heap.
+static inline void heap_swap(uint32_t i, uint32_t j); // Swap heap array elements.
 
 ////////////////////////////////////////////////////////////////////////////////
 // Private (static) variables
@@ -151,7 +154,7 @@ int32_t _global_log_level = LOG_DEFAULT;
 
 mod_err_t log_init(void)
 {
-    SLIST_INIT(&log_head); // Initialize linked list by setting head pointer to NULL
+    SLIST_INIT(&log_head); // Initialize linked list by setting head pointer to NULL.
     LOGI(TAG, "Initialized log module");
     return cmd_register(&log_client_info);
 }
@@ -167,13 +170,13 @@ bool log_is_active(void)
     return _log_active;
 }
 
-void log_printf(const char* tag, log_level_t level, const char *fmt, ...)
+void log_printf(const char *tag, log_level_t level, const char *fmt, ...)
 {
-	log_level_t tag_level = get_log_level(tag);
-	if(level > tag_level)
-	{
-		return;
-	}
+    log_level_t tag_level = get_log_level(tag);
+    if (level > tag_level)
+    {
+        return;
+    }
     va_list args;
     va_start(args, fmt);
     vprintf(fmt, args);
@@ -231,15 +234,15 @@ static int32_t log_level_int(const char *level_name)
  */
 static uint32_t cmd_log_get(uint32_t argc, const char **argv)
 {
-    LOGI(TAG, "Global log level: (%s)", log_level_str(_global_log_level));
+    LOG("Global log level: (%s)\r\n", log_level_str(_global_log_level));
 
-    if(!SLIST_EMPTY(&log_head))
+    if (!SLIST_EMPTY(&log_head))
     {
-    	Log_entry *p = NULL;
-    	SLIST_FOREACH(p, &log_head, entries)
-    	{
-    		LOGI(TAG, "%s log level: (%s)", p->tag, log_level_str(p->level));
-    	}
+        Log_entry *p = NULL;
+        SLIST_FOREACH(p, &log_head, entries)
+        {
+            LOG("%s log level: (%s)\r\n", p->tag, log_level_str(p->level));
+        }
     }
 
     return 0;
@@ -271,8 +274,8 @@ static uint32_t cmd_log_set(uint32_t argc, const char **argv)
             return 1;
         }
         else
-        {	             // tag , level
-            log_level_set(argv[0], new_log_level);				    
+        { // tag , level
+            log_level_set(argv[0], new_log_level);
             return 0;
         }
     }
@@ -286,70 +289,68 @@ static uint32_t cmd_log_set(uint32_t argc, const char **argv)
  *
  * @note Wild-card tag resets log level of all tags to given value.
  */
-static void log_level_set(const char* tag, log_level_t level)
+static inline void log_level_set(const char *tag, log_level_t level)
 {
-	Log_entry *p = NULL;
+    Log_entry *p = NULL;
 
-	/* Set global log level and delete linked list containing tag entries. */
-	if(strcmp("*", tag) == 0)
-	{
-		_global_log_level = level;
+    /* Set global log level and delete linked list containing tag entries. */
+    if (strcmp("*", tag) == 0)
+    {
+        _global_log_level = level;
 
-		LOGI(TAG, "Clearing list and cache");
-		while (!SLIST_EMPTY(&log_head))
-		{
-		   p = SLIST_FIRST(&log_head);
-		   SLIST_REMOVE_HEAD(&log_head, entries);
-		   free(p);
-		}
+        LOGI(TAG, "Clearing list and cache");
+        while (!SLIST_EMPTY(&log_head))
+        {
+            p = SLIST_FIRST(&log_head);
+            SLIST_REMOVE_HEAD(&log_head, entries);
+            free(p);
+        }
 
-		cache_state.entry_count = 0;
-		cache_state.max_generation = 0;
+        cache_state.entry_count = 0;
+        cache_state.max_generation = 0;
 
-		LOGI(TAG, "Global log level set to (%s)", log_level_str(_global_log_level));
-		return;
-	}
+        LOG("Global log level set to (%s)\r\n", log_level_str(_global_log_level));
+        return;
+    }
 
-	/* Check if tag is already saved in linked list. */
+    /* Check if tag is already saved in linked list. */
     SLIST_FOREACH(p, &log_head, entries)
     {
         if (strcmp(p->tag, tag) == 0)
         {
             p->level = level;
-            LOGI(TAG, "%s log level set to (%s)", p->tag, log_level_str(p->level));
+            LOG("%s log level set to (%s)\r\n", p->tag, log_level_str(p->level));
             break;
         }
     }
 
     /* Tag not found in linked list, add new entry. */
-    if(p == NULL)
+    if (p == NULL)
     {
-		Log_entry *new_entry = (Log_entry *)malloc(sizeof(Log_entry));
-		if(new_entry == NULL)
-		{
-			LOGW(TAG, "Insufficient heap memory for new list entry.");
-			return;
-		}
-		new_entry->level = level;
-		strncpy(new_entry->tag, tag, sizeof(new_entry->tag));
-		SLIST_INSERT_HEAD(&log_head, new_entry, entries);
-		LOGI(TAG, "Added tag (%s) to list with level (%s)", new_entry->tag, log_level_str(new_entry->level));
+        Log_entry *new_entry = (Log_entry *)malloc(sizeof(Log_entry));
+        if (new_entry == NULL)
+        {
+            LOGW(TAG, "Insufficient heap memory for new list entry.");
+            return;
+        }
+        new_entry->level = level;
+        strncpy(new_entry->tag, tag, sizeof(new_entry->tag));
+        SLIST_INSERT_HEAD(&log_head, new_entry, entries);
+        LOG("Added tag (%s) to list with level (%s)\r\n", new_entry->tag, log_level_str(new_entry->level));
     }
 
-
-	/* Update entry in cache if it exists.
+    /* Update entry in cache if it exists.
      * search in the cache and update the entry it if exists */
-	for (uint32_t i = 0; i < cache_state.entry_count; ++i)
-	{
-		if (strcmp(cache_state.cache[i].tag, tag) == 0)
-		{
-			cache_state.cache[i].level = level;
-			break;
-		}
-	}
+    for (uint32_t i = 0; i < cache_state.entry_count; ++i)
+    {
+        if (strcmp(cache_state.cache[i].tag, tag) == 0)
+        {
+            cache_state.cache[i].level = level;
+            break;
+        }
+    }
 
-
-	return;
+    return;
 }
 
 /**
@@ -359,22 +360,22 @@ static void log_level_set(const char* tag, log_level_t level)
  *
  * @return Tag's log level or global log level if not found.
  */
-static log_level_t get_log_level(const char *tag)
+static inline log_level_t get_log_level(const char *tag)
 {
-	log_level_t tag_lvl = 0;
-	if(!get_cached_log_level(tag, &tag_lvl))
-	{
-		if(!get_uncached_log_level(tag, &tag_lvl))
-		{
-			/* Log level not found, default to global log level. */
-			tag_lvl = _global_log_level;
-		}
+    log_level_t tag_lvl = 0;
+    if (!get_cached_log_level(tag, &tag_lvl))
+    {
+        if (!get_uncached_log_level(tag, &tag_lvl))
+        {
+            /* Log level not found, default to global log level. */
+            tag_lvl = _global_log_level;
+        }
 
-		/* Add to cache for faster access */
-		log_add_cache(tag, tag_lvl);
-	}
+        /* Add to cache for faster access */
+        log_add_cache(tag, tag_lvl);
+    }
 
-	return tag_lvl;
+    return tag_lvl;
 }
 
 /**
@@ -385,11 +386,11 @@ static log_level_t get_log_level(const char *tag)
  * @return true Level found in cache.
  *         false Level not found in cache.
  */
-static bool get_cached_log_level(const char *tag, log_level_t *level)
+static inline bool get_cached_log_level(const char *tag, log_level_t *level)
 {
 
     /* Assumes tag stored as static variable */
-	uint32_t i;
+    uint32_t i;
     for (i = 0; i < cache_state.entry_count; ++i)
     {
         if (cache_state.cache[i].tag == tag)
@@ -397,7 +398,7 @@ static bool get_cached_log_level(const char *tag, log_level_t *level)
             break;
         }
     }
-    
+
     /* Could not find log level */
     if (i == cache_state.entry_count)
     {
@@ -405,7 +406,7 @@ static bool get_cached_log_level(const char *tag, log_level_t *level)
     }
 
     /* Return level */
-    *level = (log_level_t) cache_state.cache[i].level;
+    *level = (log_level_t)cache_state.cache[i].level;
 
     /* If cache is full, increment generation with each cache hit and heapify */
     if (cache_state.entry_count == TAG_CACHE_SIZE)
@@ -425,11 +426,11 @@ static bool get_cached_log_level(const char *tag, log_level_t *level)
  *
  * @return true if log level found, false otherwise.
  */
-static bool get_uncached_log_level(const char * tag, log_level_t *level)
+static inline bool get_uncached_log_level(const char *tag, log_level_t *level)
 {
     Log_entry *p = NULL;
 
-	SLIST_FOREACH(p, &log_head, entries)
+    SLIST_FOREACH(p, &log_head, entries)
     {
         if (strcmp(p->tag, tag) == 0)
         {
@@ -438,7 +439,7 @@ static bool get_uncached_log_level(const char * tag, log_level_t *level)
         }
     }
 
-	return false;
+    return false;
 }
 
 /**
@@ -449,36 +450,34 @@ static bool get_uncached_log_level(const char * tag, log_level_t *level)
  *
  * Cache is implemented using a binary min-heap.
  */
-static void log_add_cache(const char *tag, log_level_t log_level)
+static inline void log_add_cache(const char *tag, log_level_t log_level)
 {
-	uint32_t generation = cache_state.max_generation++;
+    uint32_t generation = cache_state.max_generation++;
 
     /* No need to sort since min-heap. */
     if (cache_state.entry_count < TAG_CACHE_SIZE)
     {
-        cache_state.cache[cache_state.entry_count] = (Log_cached_entry) {
+        cache_state.cache[cache_state.entry_count] = (Log_cached_entry){
             .generation = generation,
             .level = log_level,
-            .tag = tag
-        };
+            .tag = tag};
         ++cache_state.entry_count;
         return;
     }
 
-    // Cache is full, replace first element 
+    // Cache is full, replace first element
     // and do bubble-down sorting to restore
     // binary min-heap.
-    cache_state.cache[0] = (Log_cached_entry) {
+    cache_state.cache[0] = (Log_cached_entry){
         .tag = tag,
         .level = log_level,
-        .generation = generation
-    };
+        .generation = generation};
     heap_bubble_down(0);
 }
 
-static void heap_bubble_down(int index)
+static inline void heap_bubble_down(int index)
 {
-    while (index < TAG_CACHE_SIZE / 2) 
+    while (index < TAG_CACHE_SIZE / 2)
     {
         uint32_t left_index = index * 2 + 1;
         uint32_t right_index = left_index + 1;
@@ -488,7 +487,7 @@ static void heap_bubble_down(int index)
     }
 }
 
-static void heap_swap(uint32_t i, uint32_t j)
+static inline void heap_swap(uint32_t i, uint32_t j)
 {
     Log_cached_entry tmp = cache_state.cache[i];
     cache_state.cache[i] = cache_state.cache[j];
