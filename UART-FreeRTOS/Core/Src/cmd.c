@@ -59,9 +59,6 @@ static const char *TAG = "CMD";
 /* Command active object */
 static Cmd_Active cmd_ao;
 
-/* TimeEvent instance. */
-static TimeEvent cmd_time_evt;
-
 ////////////////////////////////////////////////////////////////////////////////
 // Public (global) variables and externs
 ////////////////////////////////////////////////////////////////////////////////
@@ -82,9 +79,6 @@ mod_err_t cmd_init(void)
     Active_ctor((Active *)&cmd_ao, (EventHandler)&Cmd_Event_Handler); // Call base active object constructor.
     cmd_base = &(cmd_ao.base);
     memset(cmd_ao.cmd_buf, 0, CONSOLE_CMD_BUF_SIZE); // Initialize private variables.
-
-    TimeEvent_ctor(&cmd_time_evt, TIMEOUT_SIG, &cmd_ao.base);
-
     LOGI(TAG, "Initialized command.");
     return MOD_OK;
 }
@@ -102,6 +96,7 @@ mod_err_t cmd_register(const cmd_client_info *_client_info)
         if (client_infos[i] == NULL || strcasecmp(client_infos[i]->client_name, _client_info->client_name) == 0)
         {
             client_infos[i] = _client_info;
+            LOGI(TAG, "Registered commands for %s module", client_infos[i]->client_name);
             return MOD_OK;
         }
     }
@@ -475,16 +470,12 @@ static void Cmd_Event_Handler(Cmd_Active *const ao, Cmd_Event const *const evt)
     switch (evt->base.sig)
     {
     case INIT_SIG:
-    	LOGI(TAG, "Arming timer.");
-    	TimeEvent_arm(&cmd_time_evt, 5U, 5U);
+    	LOGI(TAG, "Command active object initialized.");
         break;
     case CMD_RX_SIG:
         /* Copy command line to avoid race conditions. */
         strncpy(cmd_ao.cmd_buf, evt->cmd_line, CONSOLE_CMD_BUF_SIZE);
         cmd_execute(cmd_ao.cmd_buf);
-        break;
-    case TIMEOUT_SIG:
-    	LOGI(TAG, "Timeout event received.");
         break;
     default:
         LOGW(TAG, "Unknown event signal");

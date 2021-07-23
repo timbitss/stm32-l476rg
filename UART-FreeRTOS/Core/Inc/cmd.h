@@ -48,7 +48,6 @@ typedef struct
 enum cmd_signals
 {
     CMD_RX_SIG = USER_SIG, // Command received from user over serial.
-	TIMEOUT_SIG                // Timer event.
 };
 
 /* Derived command event class */

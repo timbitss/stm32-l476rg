@@ -59,10 +59,7 @@ mod_err_t Active_start(Active *const ao,
     ao->thread_id = osThreadNew(Active_event_loop, (void *)ao, thread_attr);
     ao->queue_id = osMessageQueueNew(msg_count, sizeof(Event *), queue_attr);
 
-    if (ao->thread_id == NULL || ao->queue_id == NULL)
-    {
-        return MOD_ERR;
-    }
+    ASSERT(ao->thread_id != NULL && ao->queue_id != NULL);
 
     return MOD_OK;
 }
@@ -88,11 +85,11 @@ void TimeEvent_ctor(TimeEvent *const time_evt, Signal sig, Active *ao)
     time_evt->timeout = 0U;
     time_evt->reload = 0U;
 
-    /* Start 1 s software timer. */
+    /* Start ms software timer. */
     if(num_time_events == 0)
     {
         timer_inst = osTimerNew(TimeEvent_tick, osTimerPeriodic, NULL, NULL);
-        ASSERT(osTimerStart(timer_inst, 1000) == osOK);
+        ASSERT(osTimerStart(timer_inst, 1) == osOK);
     }
 
     /* Register TimeEvent instance. */

@@ -21,10 +21,12 @@
 typedef int32_t Signal;
 
 /* Reserved signals */
-enum ReservedSignalsl
+enum ReservedSignals
 {
-    INIT_SIG, // Dispatched to AO before entering event-loop
-    USER_SIG  // First signal available to the users
+    INIT_SIG,  // Dispatched to AO before entering event-loop
+    ENTRY_SIG, // Trigger action upon entry into state.
+    EXIT_SIG,  // Trigger action upon exit from state.
+    USER_SIG   // First signal available to the users
 };
 
 /**
@@ -48,11 +50,11 @@ typedef struct Active Active;
  */
 typedef struct
 {
-    Event base;        // Inherit base Event class.
+    Event base; // Inherit base Event class.
 
-    Active *ao;        // Active object that requested the time event.
-    uint32_t timeout;  // Timeout counter in ms; 0 means not armed.
-    uint32_t reload;   // Reload value for periodic time events, 0 means one-shot.
+    Active *ao;       // Active object that requested the time event.
+    uint32_t timeout; // Timeout counter in ms; 0 means not armed.
+    uint32_t reload;  // Reload value for periodic time events, 0 means one-shot.
 } TimeEvent;
 
 /* Event handler function pointer typedef. */
@@ -127,7 +129,7 @@ void TimeEvent_ctor(TimeEvent *const time_evt, Signal sig, Active *ao);
  * @brief Arm specific time event instance.
  * 
  * @param[in/out] time_evt Timer event instance.
- * @param[in] timeout Timeout value (s).
+ * @param[in] timeout Timeout value (ms).
  * @param[in] reload Auto-reload value (0 for one-shot).
  */
 void TimeEvent_arm(TimeEvent *const time_evt, uint32_t timeout, uint32_t reload);

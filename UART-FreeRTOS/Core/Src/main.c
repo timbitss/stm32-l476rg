@@ -29,6 +29,7 @@
 #include "console.h"
 #include "cmd.h"
 #include "log.h"
+#include "reflow.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -313,9 +314,11 @@ void StartDefaultTask(void *argument)
     console_init();
     cmd_init();
     log_init();
+    reflow_init();
 
     console_start();
     cmd_start();
+    reflow_start();
 
     osThreadTerminate(NULL);
     /* Infinite loop */
