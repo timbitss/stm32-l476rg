@@ -34,7 +34,10 @@ static TimeEvent *time_events[10];
 static uint8_t num_time_events;
 
 /* Software timer instance */
-osTimerId_t timer_inst;
+osTimerId_t ms_timer_inst;
+
+/* Condition so that 1 ms timer is started once */
+static bool first_arm = false;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Public (global) functions
@@ -85,13 +88,6 @@ void TimeEvent_ctor(TimeEvent *const time_evt, Signal sig, Active *ao)
     time_evt->timeout = 0U;
     time_evt->reload = 0U;
 
-    /* Start ms software timer. */
-    if(num_time_events == 0)
-    {
-        timer_inst = osTimerNew(TimeEvent_tick, osTimerPeriodic, NULL, NULL);
-        ASSERT(osTimerStart(timer_inst, 1) == osOK);
-    }
-
     /* Register TimeEvent instance. */
     ASSERT(num_time_events < ARRAY_SIZE(time_events));
     time_events[num_time_events++] = time_evt;
@@ -99,14 +95,27 @@ void TimeEvent_ctor(TimeEvent *const time_evt, Signal sig, Active *ao)
 
 void TimeEvent_arm(TimeEvent *const time_evt, uint32_t timeout, uint32_t reload)
 {
-    osKernelLock(); // Data shared between threads and timer ISR.
+	LOGI(TAG, "Arming time event.");
+    osKernelLock(); // Data shared between threads and timer ISR
     time_evt->timeout = timeout;
     time_evt->reload = reload;
     osKernelUnlock();
+
+    /* Start 1 ms timer if first arming of timer. */
+    if(first_arm == false)
+    {
+	    ms_timer_inst = osTimerNew(TimeEvent_tick, osTimerPeriodic, NULL, NULL);
+		ASSERT(ms_timer_inst != NULL);
+		LOGI(TAG, "Starting 1 ms periodic timer.");
+		osStatus_t err = osTimerStart(ms_timer_inst, 20);
+		ASSERT(err == osOK);
+		first_arm = true;
+    }
 }
 
 void TimeEvent_disarm(TimeEvent *const time_evt)
 {
+	LOGI(TAG, "Disarming time event.");
     osKernelLock(); // Data shared between threads and timer ISR.
     time_evt->timeout = 0U;
     osKernelUnlock();

@@ -71,7 +71,7 @@ typedef enum
  */
 #define LOG_FORMAT(letter, format) "\r" LOG_COLOUR_##letter #letter " (%lu.%03lu) %s: " format "\r\n"
 
-#define ASSERTION_FORMAT LOG_COLOUR_E "(%lu.%03lu) Assertion failed at %s, line %d" \
+#define ASSERTION_FORMAT LOG_COLOUR_E "E (%lu.%03lu) Assertion failed at %s, line %d" \
                                       "\r\n"
 
 /**

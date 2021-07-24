@@ -11,11 +11,6 @@ Core/Src/reflow.o: ../Core/Src/reflow.c ../Core/Inc/reflow.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/task.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/list.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.h \
- ../Core/Inc/pid.h ../Core/Inc/active.h ../Core/Inc/log.h \
- ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal.h \
- ../Core/Inc/stm32l4xx_hal_conf.h \
- ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_rcc.h \
- ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_def.h \
  ../Drivers/CMSIS/Device/ST/STM32L4xx/Include/stm32l4xx.h \
  ../Drivers/CMSIS/Device/ST/STM32L4xx/Include/stm32l476xx.h \
  ../Drivers/CMSIS/Include/core_cm4.h \
@@ -24,6 +19,10 @@ Core/Src/reflow.o: ../Core/Src/reflow.c ../Core/Inc/reflow.h \
  ../Drivers/CMSIS/Include/cmsis_gcc.h \
  ../Drivers/CMSIS/Include/mpu_armv7.h \
  ../Drivers/CMSIS/Device/ST/STM32L4xx/Include/system_stm32l4xx.h \
+ ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal.h \
+ ../Core/Inc/stm32l4xx_hal_conf.h \
+ ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_rcc.h \
+ ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_def.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/Legacy/stm32_hal_legacy.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_rcc_ex.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_gpio.h \
@@ -38,9 +37,15 @@ Core/Src/reflow.o: ../Core/Src/reflow.c ../Core/Inc/reflow.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_i2c_ex.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_pwr.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_pwr_ex.h \
+ ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_spi.h \
+ ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_spi_ex.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_tim.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_tim_ex.h \
- ../Core/Inc/printf.h ../Core/Inc/cmd.h ../Core/Inc/cmd.h
+ ../Core/Inc/MAX31855K.h \
+ ../Drivers/CMSIS/Device/ST/STM32L4xx/Include/stm32l476xx.h \
+ ../Core/Inc/pid.h ../Core/Inc/active.h ../Core/Inc/log.h \
+ ../Core/Inc/printf.h ../Core/Inc/cmd.h ../Core/Inc/cmd.h \
+ ../Core/Inc/MAX31855K.h
 
 ../Core/Inc/reflow.h:
 
@@ -70,20 +75,6 @@ Core/Src/reflow.o: ../Core/Src/reflow.c ../Core/Inc/reflow.h \
 
 ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.h:
 
-../Core/Inc/pid.h:
-
-../Core/Inc/active.h:
-
-../Core/Inc/log.h:
-
-../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal.h:
-
-../Core/Inc/stm32l4xx_hal_conf.h:
-
-../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_rcc.h:
-
-../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_def.h:
-
 ../Drivers/CMSIS/Device/ST/STM32L4xx/Include/stm32l4xx.h:
 
 ../Drivers/CMSIS/Device/ST/STM32L4xx/Include/stm32l476xx.h:
@@ -99,6 +90,14 @@ Core/Src/reflow.o: ../Core/Src/reflow.c ../Core/Inc/reflow.h \
 ../Drivers/CMSIS/Include/mpu_armv7.h:
 
 ../Drivers/CMSIS/Device/ST/STM32L4xx/Include/system_stm32l4xx.h:
+
+../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal.h:
+
+../Core/Inc/stm32l4xx_hal_conf.h:
+
+../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_rcc.h:
+
+../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_def.h:
 
 ../Drivers/STM32L4xx_HAL_Driver/Inc/Legacy/stm32_hal_legacy.h:
 
@@ -128,12 +127,28 @@ Core/Src/reflow.o: ../Core/Src/reflow.c ../Core/Inc/reflow.h \
 
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_pwr_ex.h:
 
+../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_spi.h:
+
+../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_spi_ex.h:
+
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_tim.h:
 
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_tim_ex.h:
+
+../Core/Inc/MAX31855K.h:
+
+../Drivers/CMSIS/Device/ST/STM32L4xx/Include/stm32l476xx.h:
+
+../Core/Inc/pid.h:
+
+../Core/Inc/active.h:
+
+../Core/Inc/log.h:
 
 ../Core/Inc/printf.h:
 
 ../Core/Inc/cmd.h:
 
 ../Core/Inc/cmd.h:
+
+../Core/Inc/MAX31855K.h:

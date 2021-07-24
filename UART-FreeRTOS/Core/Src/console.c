@@ -93,10 +93,7 @@ mod_err_t console_start(void)
     console.console_thread_id = osThreadNew(Console_thread, NULL, &thread_attr);
     console.console_queue_id = osMessageQueueNew(CONSOLE_MSG_QUEUE_SIZE, sizeof(char), NULL);
 
-    if (console.console_queue_id == NULL || console.console_thread_id == NULL)
-    {
-        return MOD_ERR;
-    }
+    ASSERT(console.console_queue_id != NULL && console.console_thread_id != NULL);
 
     uart_start();
 

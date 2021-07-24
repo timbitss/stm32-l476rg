@@ -25,7 +25,6 @@ enum ReservedSignals
 {
     INIT_SIG,  // Dispatched to AO before entering event-loop
     ENTRY_SIG, // Trigger action upon entry into state.
-    EXIT_SIG,  // Trigger action upon exit from state.
     USER_SIG   // First signal available to the users
 };
 

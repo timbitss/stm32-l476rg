@@ -1,3 +1,4 @@
+"Core/Src/MAX31855K.o"
 "Core/Src/active.o"
 "Core/Src/cmd.o"
 "Core/Src/console.o"
@@ -30,6 +31,8 @@
 "Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_pwr_ex.o"
 "Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_rcc.o"
 "Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_rcc_ex.o"
+"Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_spi.o"
+"Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_spi_ex.o"
 "Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_tim.o"
 "Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_tim_ex.o"
 "Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_ll_dma.o"

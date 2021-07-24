@@ -9,10 +9,14 @@
 #ifndef __REFLOW_H__
 #define __REFLOW_H__
 
+#include <stdint.h>
+
 #include "active.h"
+#include "stm32l4xx.h"
+#include "MAX31855K.h"
 
 /* Configuration parameters */
-#define REFLOW_THREAD_STACK_SZ 1024
+#define REFLOW_THREAD_STACK_SZ 1024 * 2
 
 #define KP_INIT 10.0f 		 // Kp gain.
 #define KI_INIT 0.0f  		 // Ki gain.
@@ -33,10 +37,23 @@ enum ReflowSignal
 	NUM_REFLOW_SIGS
 };
 
+/* Reflow oven controller configuration structure */
+typedef struct
+{
+	TIM_HandleTypeDef * pwm_timer_handle;   // PWM Timer handle.
+	uint32_t pwm_channel;					// PWM Timer channel.
+	MAX31855K_cfg_t max_cfg;                // MAX31855K Thermocouple IC configuration structure.
+} Reflow_cfg_t;
+
 /**
  * @brief Initialize reflow oven controller.
+ *
+ * @param reflow_cfg Reflow oven configuration parameters.
+ *
+ * @note Make sure that timer period is 4095 ticks or 12-bit PWM resolution
+ * 	     with PWM frequency of around 2 Hz.
  */
-void reflow_init();
+void reflow_init(Reflow_cfg_t const * const reflow_cfg);
 
 /**
  * @brief Start reflow oven active object instance.
