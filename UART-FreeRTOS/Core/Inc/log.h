@@ -126,7 +126,7 @@ extern int32_t _global_log_level; // Only print messages at or below the global 
 #define LOGE(tag, fmt, ...)                                                                           \
     do                                                                                                \
     {                                                                                                 \
-        if (_log_active && _global_log_level >= LOG_ERROR)                                            \
+        if (_log_active)                                            \
         {                                                                                             \
             uint32_t ms = HAL_GetTick();                                                              \
             log_printf(tag, LOG_ERROR, LOG_FORMAT(E, fmt), ms / 1000, ms % 1000, tag, ##__VA_ARGS__); \

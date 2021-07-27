@@ -80,7 +80,7 @@ SLIST_HEAD(Log_head_t, Log_entry);
 ////////////////////////////////////////////////////////////////////////////////
 
 /* Command callback functions */
-static uint32_t cmd_log_get(uint32_t argc, const char **argv); // Get log levels callback.
+static uint32_t cmd_log_status(uint32_t argc, const char **argv); // Get log levels callback.
 static uint32_t cmd_log_set(uint32_t argc, const char **argv); // Set log level callback.
 
 static inline void log_level_set(const char *tag, log_level_t level); // Set tag's log level.
@@ -107,8 +107,8 @@ static const char *log_level_names[] = {
 
 /* Log command information. */
 static cmd_cmd_info log_cmds[] = {
-    {.cmd_name = "get",
-     .cb = cmd_log_get,
+    {.cmd_name = "status",
+     .cb = cmd_log_status,
      .help = "Display log levels.\r\nPossible log levels: " LOG_LEVEL_NAMES},
     {.cmd_name = "set",
      .cb = cmd_log_set,
@@ -232,7 +232,7 @@ static int32_t log_level_int(const char *level_name)
  *
  * Log levels include global log level and individual tag log levels that override global level.
  */
-static uint32_t cmd_log_get(uint32_t argc, const char **argv)
+static uint32_t cmd_log_status(uint32_t argc, const char **argv)
 {
     LOG("Global log level: (%s)\r\n", log_level_str(_global_log_level));
 

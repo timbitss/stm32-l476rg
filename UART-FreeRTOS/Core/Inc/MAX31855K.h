@@ -33,6 +33,8 @@ typedef enum
     MAX_OPEN,         // Thermocouple connection is open.
     MAX_ZEROS,        // SPI read only 0s.
     MAX_SPI_DMA_FAIL, // Error during SPI DMA RX transfer.
+
+	MAX_NUM_ERRORS
 } MAX31855K_err_t;
 
 
@@ -95,5 +97,12 @@ float MAX31855K_Get_HJ();
  * @return float Cold junction temperature.
  */
 float MAX31855K_Get_CJ();
+
+/**
+ * @brief Get current error value as a character string.
+ *
+ * @return Error value formatted as character string.
+ */
+const char * MAX31855K_Err_Str();
 
 #endif

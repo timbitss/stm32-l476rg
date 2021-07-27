@@ -26,6 +26,8 @@
 #define HJ_RES 0.25   // Hot junction temperature resolution in degrees Celsius.
 #define CJ_RES 0.0625 // Cold junction temperature resolution in degrees Celsius.
 
+#define MAX_ERR_NAMES_CSV "MAX_OK", "MAX_SHORT_VCC", "MAX_SHORT_GND", "MAX_OPEN", "MAX_ZEROS", "MAX_SPI_DMA_FAIL"
+
 // MAX31885K thermocouple device structure definition.
 typedef struct
 {
@@ -50,8 +52,7 @@ static void MAX31855K_error_check(); // Check data for device faults or SPI read
 /* MAX31855K_t instance. */
 static MAX31855K_t max;
 
-/* Unique module tag for logging information */
-static const char* TAG = "MAX";
+static const char* max_err_names[MAX_NUM_ERRORS] = {MAX_ERR_NAMES_CSV};
 
 void MAX31855K_Init(MAX31855K_cfg_t const * const max_cfg)
 {
@@ -134,6 +135,11 @@ float MAX31855K_Get_CJ()
     return val * CJ_RES;
 }
 
+const char * MAX31855K_Err_Str()
+{
+	ASSERT(max.err < MAX_NUM_ERRORS);
+	return max_err_names[max.err];
+}
 
 static void MAX31855K_error_check()
 {
@@ -148,15 +154,12 @@ static void MAX31855K_error_check()
         {
         case 0x4:
             max.err = MAX_SHORT_VCC;
-            LOGE(TAG, "Thermocouple shorted to VCC.");
             break;
         case 0x2:
             max.err = MAX_SHORT_GND;
-            LOGE(TAG, "Thermocouple shorted to GND.");
             break;
         case 0x1:
             max.err = MAX_OPEN;
-            LOGE(TAG, "Thermocouple open.");
             break;
         default:
         	ASSERT(0); // Should never reach this point.
@@ -168,3 +171,4 @@ static void MAX31855K_error_check()
         max.err = MAX_OK;
     }
 }
+

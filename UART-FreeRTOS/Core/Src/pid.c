@@ -12,6 +12,7 @@
  */
 
 #include "PID.h"
+#include "log.h"
 
 #define SAMESIGN(X, Y) ((X) <= 0) == ((Y) <= 0)
 
@@ -19,11 +20,7 @@ void PID_Init(PID_t * const pid, PID_cfg_t const * const pid_cfg)
 {
 
 	/* Clear controller memory */
-	pid->integral = 0.0f;
-	pid->prev_error = 0.0f;
-	pid->derivative = 0.0f;
-	pid->prev_measurement = 0.0f;
-	pid->out = 0.0f;
+	PID_Reset(pid);
 
     /* Store controller parameters */
     pid->Kp = pid_cfg->Kp;
@@ -76,6 +73,9 @@ float PID_Calculate(PID_t * const pid, float setpoint, float measurement)
     pid->prev_error       = error;
     pid->prev_measurement = measurement;
 
+    /* Store proportional term for data logging */
+    pid->proportional = proportional;
+
 	/* Return controller output */
     return pid->out;
 }
@@ -87,4 +87,5 @@ void PID_Reset(PID_t * const pid)
 	pid->derivative = 0.0f;
 	pid->prev_measurement = 0.0f;
 	pid->out = 0.0f;
+    pid->proportional = 0.0f;
 }

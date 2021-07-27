@@ -8,6 +8,7 @@
 
 #include <string.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 #include "reflow.h"
 #include "pid.h"
@@ -72,11 +73,11 @@ typedef struct
     osTimerId_t pid_timer_id;  // 1/Ts Hz timer for PID calculations.
 
     /* Other variables */
-    Reflow_State state;                             // State variable for state machine.
-    PID_t pid_params;                               // PID parameters.
-    float step_size;                                // Temperature step size for REACHTIME phases (deg C / sample).
-    float setpoint;                                 // Commanded/setpoint temperature.
-    Reflow_Phase reflow_phases[NUM_PROFILE_PHASES]; // Reflow phase characteristics.
+    Reflow_State state;                                   // State variable for state machine.
+    PID_t pid_params;                                     // PID parameters.
+    float step_size;                                      // Temperature step size for REACHTIME phases (deg C / sample).
+    float setpoint;                                       // Setpoint temperature.
+    const Reflow_Phase reflow_phases[NUM_PROFILE_PHASES]; // Reflow phase characteristics.
 } Reflow_Active;
 
 /* Callback function prototype for event handler. */
@@ -86,18 +87,20 @@ static void reflow_evt_handler(Reflow_Active *const ao, Event const *const evt);
 static inline void displayPIDParams();                                           // Display PID parameters.
 static inline void displayProfileParams();                                       // Display reflow profile phase parameters.
 static inline void displayState();                                               // Display current state.
-static uint32_t reflow_get_params_cmd(uint32_t argc, const char **argv);         // Get reflow oven controller parameters.
+static uint32_t reflow_status_cmd(uint32_t argc, const char **argv);             // Display various reflow parameters and state.
 static uint32_t reflow_start_cmd(uint32_t argc, const char **argv);              // Start reflow process command handler.
 static uint32_t reflow_stop_cmd(uint32_t argc, const char **argv); 			     // Stop reflow process command handler.
+static uint32_t reflow_set_cmd(uint32_t argc, const char **argv);                // Set PID parameters.
 static void reflow_pid_iteration(void *argument);                                // Discrete PID controller iteration.
 static inline bool readTemperature(float *const temp);                           // Read thermocouple temperature.
+
 
 /* Reflow active object. */
 static Reflow_Active reflow_ao = {
     .reflow_phases = {{.phase_type = REACHTEMP, .reach_temp = 125},                       // Pre-heat
-                      {.phase_type = REACHTIME, .reach_temp = 180, .reach_time = 120000}, // Soak
+                      {.phase_type = REACHTIME, .reach_temp = 183, .reach_time = 120},    // Soak
                       {.phase_type = REACHTEMP, .reach_temp = 225},                       // Ramp-up
-                      {.phase_type = REACHTIME, .reach_temp = 225, .reach_time = 5000},   // Peak
+                      {.phase_type = REACHTIME, .reach_temp = 225, .reach_time = 5},      // Peak
                       {.phase_type = REACHTEMP, .reach_temp = 35}}                        // Cool-down
 };
 
@@ -109,26 +112,29 @@ static const char *reflow_names[NUM_REFLOW_STATES] = {REFLOW_PROFILE_PHASES_CSV}
 
 /* Information about reflow commands. */
 static const cmd_cmd_info reflow_cmd_infos[] = {
-{ .cmd_name = "get",
-  .cb = &reflow_get_params_cmd,
-  .help = "Display reflow oven parameters (pid, profile, state, or *)\r\nUsage: reflow get <param> " },
+{ .cmd_name = "status",
+  .cb = &reflow_status_cmd,
+  .help = "Dump information about reflow oven controller." },
 { .cmd_name = "start",
 .cb = &reflow_start_cmd,
 .help = "Start reflow process." },
 { .cmd_name = "stop",
   .cb = &reflow_stop_cmd,
-  .help = "Stop reflow process." }, };
+  .help = "Stop reflow process." },
+  { .cmd_name = "set",
+    .cb = &reflow_set_cmd,
+    .help = "Set pid parameters (Kp, Ki, Kd, Tau)\r\nUsage: reflow set <param> <value> [<param2> <value2> ...] "}};
 
 /* Client information for command module */
 static cmd_client_info reflow_client_info = {.client_name = "reflow", // Client name (first command line token)
-                                             .num_cmds = 3,
+                                             .num_cmds = 4,
                                              .cmds = reflow_cmd_infos,
                                              .num_u16_pms = 0,
                                              .u16_pms = NULL,
                                              .u16_pm_names = NULL};
 
 /* Stop reflow process event signal */
-static const Event stop_evt = { .sig = REACH_TEMP_SIG };
+static const Event stop_evt = { .sig = STOP_REFLOW_SIG };
 
 /*---------------------------------------------------------------------------*/
 /* State machine facilities... */
@@ -143,6 +149,7 @@ static Reflow_Status Reflow_reset_INIT(Reflow_Active *const ao, Event const *con
 static Reflow_Status Reflow_reset_ENTRY(Reflow_Active *const ao, Event const *const evt)
 {
     /* Disable PWM output signal */
+	LOGI(TAG, "Turning PWM off.");
 	__HAL_TIM_SET_COMPARE(ao->pwm_timer_handle, ao->pwm_channel, 0);
 	HAL_TIM_PWM_Stop(ao->pwm_timer_handle, ao->pwm_channel);
 
@@ -170,7 +177,7 @@ static Reflow_Status Reflow_soak_ENTRY(Reflow_Active *const ao, Event const *con
 {
 	/* Set step size for slowest temperature rise. */
     ao->step_size = (float)( ao->reflow_phases[SOAK_STATE - 1].reach_temp - ao->reflow_phases[PREHEAT_STATE-1].reach_temp )/
-    				       ( ao->reflow_phases[SOAK_STATE - 1].reach_time / 1000 * (1 / ao->pid_params.Ts) );
+    				       ( ao->reflow_phases[SOAK_STATE - 1].reach_time * (1 / ao->pid_params.Ts) );
 	TimeEvent_arm(&ao->reflow_time_evt, ao->reflow_phases[SOAK_STATE - 1].reach_time, 0);
     return HANDLED_STATUS;
 }
@@ -211,7 +218,8 @@ static Reflow_Status Reflow_reset_START(Reflow_Active *const ao, Event const *co
     }
 	else
 	{
-		LOGI(TAG, "Starting reflow process. Entering pre-heat phase.");
+		LOG("Starting reflow process\r\n");
+		LOGI(TAG, "Entering pre-heat phase.");
 		ao->state = PREHEAT_STATE;
 		return TRAN_STATUS;
 	}
@@ -254,7 +262,7 @@ static Reflow_Status Reflow_cooldown_REACHTEMP(Reflow_Active *const ao, Event co
 
 static Reflow_Status Reflow_STOP(Reflow_Active *const ao, Event const *const evt)
 {
-    LOGI(TAG, "Stopping reflow process...");
+    LOG("Reflow process stopped\r\n");
     osTimerStop(ao->pid_timer_id);
     ao->state = RESET_STATE; // Transition to RESET state.
     return TRAN_STATUS;
@@ -319,6 +327,7 @@ void reflow_start()
  */
 static void reflow_pid_iteration(void *argument)
 {
+	/* Read temperature */
 	float temp_reading = 0;
 	bool status = readTemperature(&temp_reading);
 	if(status == false)
@@ -334,7 +343,7 @@ static void reflow_pid_iteration(void *argument)
 	{
 		uint32_t reach_temp = reflow_ao.reflow_phases[reflow_ao.state - 1].reach_temp;
 		/* Give some leeway. */
-		if(reach_temp > (uint32_t)temp_reading - 1U && reach_temp < (uint32_t)temp_reading + 1U)
+		if(reach_temp > (uint32_t)temp_reading - 2U && reach_temp < (uint32_t)temp_reading + 2U)
 		{
 			static const Event reachtemp_evt = { .sig = REACH_TEMP_SIG };
 			Active_post(&reflow_ao.reflow_base, &reachtemp_evt);
@@ -348,45 +357,40 @@ static void reflow_pid_iteration(void *argument)
 		reflow_ao.setpoint += reflow_ao.step_size;
 	}
 
+	/* Acquire new PWM output signal through feedback control. */
 	float pwm_value = PID_Calculate(&reflow_ao.pid_params, reflow_ao.setpoint, temp_reading);
 
+	/* Set PWM signal */
 	__HAL_TIM_SET_COMPARE(reflow_ao.pwm_timer_handle, reflow_ao.pwm_channel, (uint16_t)pwm_value);
+
+
+	LOGI(TAG, "%s %.2f %.2f %.2f %.2f %.2f %.2f",
+											 reflow_names[reflow_ao.state],
+											 reflow_ao.setpoint,
+											 temp_reading,
+											 reflow_ao.pid_params.proportional,
+											 reflow_ao.pid_params.integral,
+											 reflow_ao.pid_params.derivative,
+											 pwm_value);
 }
 
 /**
  * @brief Display PID, profile parameters, or both to user.
  */
-static uint32_t reflow_get_params_cmd(uint32_t argc, const char **argv)
+static uint32_t reflow_status_cmd(uint32_t argc, const char **argv)
 {
-    if (argc != 1)
-    {
-        LOGW(TAG, "Expecting single token only.");
-        return -1;
-    }
-
-    if (strcasecmp(argv[0], "*") == 0)
-    {
-        displayPIDParams();
-        displayProfileParams();
-        displayState();
-    }
-    else if (strcasecmp(argv[0], "pid") == 0)
-    {
-        displayPIDParams();
-    }
-    else if (strcasecmp(argv[0], "profile") == 0)
-    {
-        displayProfileParams();
-    }
-    else if (strcasecmp(argv[0], "state") == 0)
-    {
-    	displayState();
-    }
-    else
-    {
-        LOGW(TAG, "Invalid argument: %s", argv[0]);
-        return -1;
-    }
+	displayPIDParams();
+	displayProfileParams();
+	displayState();
+	float oven_temp = 0;
+	if(readTemperature(&oven_temp))
+	{
+		LOG("Oven temperature: %.2f\r\n", oven_temp);
+	}
+	else
+	{
+		LOG("Oven temperature read error: %s\r\n", MAX31855K_Err_Str());
+	}
     return 0;
 }
 
@@ -402,6 +406,53 @@ static uint32_t reflow_stop_cmd(uint32_t argc, const char **argv)
 {
 	Active_post(&reflow_ao.reflow_base, &stop_evt);
 	LOG("Posted STOP signal to reflow active object.\r\n");
+	return 0;
+}
+
+static uint32_t reflow_set_cmd(uint32_t argc, const char **argv)
+{
+	if(argc % 2 != 0 || argc == 0)
+	{
+		LOG("Invalid number of arguments\r\n");
+		return -1;
+	}
+
+	/* Iterate through <param>,<value> pairs */
+	for(uint8_t i = 0; i < argc; i+=2)
+	{
+		const char *param = argv[i];
+		char** end_ptr;
+		uint32_t val = strtoul(argv[i + 1], end_ptr, 0);
+		if(strcasecmp(param, "Kp") == 0)
+		{
+
+			reflow_ao.pid_params.Kp = (float)val;
+			LOG("Updated Kp to %.2f\r\n", reflow_ao.pid_params.Kp);
+		}
+		else if(strcasecmp(param, "Kd") == 0)
+		{
+
+			reflow_ao.pid_params.Kd = (float)val;
+			LOG("Updated Kd to %.2f\r\n", reflow_ao.pid_params.Kd);
+		}
+		else if(strcasecmp(param, "Ki") == 0)
+		{
+
+			reflow_ao.pid_params.Ki = (float)val;
+			LOG("Updated Ki to %.2f\r\n", reflow_ao.pid_params.Ki);
+		}
+		else if(strcasecmp(param, "Tau") == 0)
+		{
+			reflow_ao.pid_params.tau = (float)val;
+			LOG("Updated tau to %.2f\r\n", reflow_ao.pid_params.tau);
+		}
+		else
+		{
+			LOG("Unrecognizable PID parameter: %s\r\n", param);
+			return -1;
+		}
+	}
+
 	return 0;
 }
 
@@ -443,7 +494,7 @@ static inline void displayProfileParams()
         LOG("Phase: %s\tType: %s\tReach Temp: %lu deg C\tReach Time: %lu s\r\n",
             reflow_names[i + 1], reflow_ao.reflow_phases[i].phase_type == REACHTEMP ? "REACHTEMP" : "REACHTIME",
             reflow_ao.reflow_phases[i].reach_temp,
-            reflow_ao.reflow_phases[i].reach_time / 1000);
+            reflow_ao.reflow_phases[i].reach_time);
     }
 }
 
@@ -457,7 +508,7 @@ static inline void displayState()
  *
  * @param[in/out] temp Temperature reading if return value is true, unmodified otherwise.
  *
- * @return true if successful read, false otherwise
+ * @return true if successful read, false otherwise.
  */
 static inline bool readTemperature(float *const temp)
 {

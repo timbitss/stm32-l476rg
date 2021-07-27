@@ -4,7 +4,7 @@ log.c:168:6:log_is_active	4	static
 log.c:173:6:log_printf	24	static
 log.c:193:20:log_level_str	16	static
 log.c:208:16:log_level_int	24	static
-log.c:235:17:cmd_log_get	32	static
+log.c:235:17:cmd_log_status	32	static
 log.c:261:17:cmd_log_set	56	static
 log.c:292:20:log_level_set	56	static
 log.c:363:27:get_log_level	24	static

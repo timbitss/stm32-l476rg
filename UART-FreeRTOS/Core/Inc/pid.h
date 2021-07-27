@@ -32,6 +32,9 @@ typedef struct {
     float prev_error;		// Previous error, required for integrator.
 	float prev_measurement; // Previous measurement, required for differentiator.
 
+    /* Solely for data logging */
+    float proportional;
+
 	float out; // Controller output.
 } PID_t;
 

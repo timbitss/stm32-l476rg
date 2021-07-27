@@ -95,7 +95,7 @@ void TimeEvent_ctor(TimeEvent *const time_evt, Signal sig, Active *ao)
 
 void TimeEvent_arm(TimeEvent *const time_evt, uint32_t timeout, uint32_t reload)
 {
-	LOGI(TAG, "Arming time event.");
+	LOGI(TAG, "Arming time event for %lu seconds (%s)", timeout, reload == 0 ? "One-shot":"Periodic");
     osKernelLock(); // Data shared between threads and timer ISR
     time_evt->timeout = timeout;
     time_evt->reload = reload;
@@ -107,7 +107,7 @@ void TimeEvent_arm(TimeEvent *const time_evt, uint32_t timeout, uint32_t reload)
 	    ms_timer_inst = osTimerNew(TimeEvent_tick, osTimerPeriodic, NULL, NULL);
 		ASSERT(ms_timer_inst != NULL);
 		LOGI(TAG, "Starting 1 ms periodic timer.");
-		osStatus_t err = osTimerStart(ms_timer_inst, 20);
+		osStatus_t err = osTimerStart(ms_timer_inst, 1000);
 		ASSERT(err == osOK);
 		first_arm = true;
     }
@@ -159,13 +159,13 @@ static void Active_event_loop(void *argument)
 }
 
 /**
- * @brief Simulate a timer tick.
+ * @brief Simulate a 1 s timer tick.
  * 
  * If TimeEvent instance's timeout value reaches zero on decrement,
  * a user-defined timeout signal is posted to the registered active object.
  *
- * @note This function should be called from within a 1 ms timer ISR
- *       or using a 1 ms OS-specific software timer.
+ * @note This function should be called from within a 1 s timer ISR
+ *       or using a 1 s OS-specific software timer.
  */
 static void TimeEvent_tick(void *argument)
 {

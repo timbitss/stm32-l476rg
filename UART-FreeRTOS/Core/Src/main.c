@@ -124,7 +124,7 @@ int main(void)
   uart_config_t uart_cfg = {.uart_reg_base = USART2, .irq_num = USART2_IRQn};
   uart_init(&uart_cfg);
   uart_start();
-    HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -445,6 +445,7 @@ void StartDefaultTask(void *argument)
     cmd_start();
     reflow_start();
 
+    osThreadTerminate(defaultTaskHandle);
     /* Infinite loop */
     for (;;)
     {
