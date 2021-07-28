@@ -1,3 +1,0 @@
-pid.c:19:6:PID_Init	16	static
-pid.c:35:7:PID_Calculate	32	static
-pid.c:83:6:PID_Reset	16	static
